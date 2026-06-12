@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_arm_bf_operand_desc_t asmkit_arm_bf_operand_descs[] = {
     {0u, ASMKIT_ARM_BF_OPERAND_REG, 128u, ASMKIT_ARM_BF_TRANSFORM_REG_QPR_FROM_DREG, ASMKIT_ARM_REGCLASS_QPR, 255u, UINT32_C(0x0000001f)},
     {1u, ASMKIT_ARM_BF_OPERAND_REG, 64u, ASMKIT_ARM_BF_TRANSFORM_RAW_UNSIGNED, ASMKIT_ARM_REGCLASS_DPR, 255u, UINT32_C(0x0000001f)},

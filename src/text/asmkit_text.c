@@ -223,6 +223,9 @@ static asmkit_status_t asmkit_text_format_with_operands(
     builder.out_capacity = out_capacity;
     builder.required = 0u;
     builder.written = 0u;
+    if (inst->arch == ASMKIT_ARCH_X86 && (inst->flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u) {
+        asmkit_text_builder_append_cstr(&builder, "lock ");
+    }
     asmkit_text_builder_append_cstr(&builder, mnemonic);
 #if ASMKIT_TEXT_ENABLE_OPERANDS
     if (inst->arch == ASMKIT_ARCH_BPF && inst->operand_count > 0u) {
@@ -268,7 +271,7 @@ asmkit_status_t asmkit_format_inst(
     case ASMKIT_ARCH_WASM: mnemonic = asmkit_gen_wasm_mnemonic(text_id); break;
     default: return ASMKIT_ERR_UNSUPPORTED_ARCH;
     }
-    if (inst->operand_count == 0u) {
+    if (inst->operand_count == 0u && (inst->flags & ASMKIT_INST_FLAG_X86_LOCK) == 0u) {
         return asmkit_text_copy(mnemonic, out_text, out_capacity, out_result);
     }
     return asmkit_text_format_with_operands(mnemonic, inst, out_text, out_capacity, out_result);

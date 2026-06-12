@@ -103,7 +103,8 @@ typedef enum asmkit_inst_flags {
     ASMKIT_INST_FLAG_LITERAL = 1u << 6,
     ASMKIT_INST_FLAG_STATE_SWITCH = 1u << 7,
     ASMKIT_INST_FLAG_PAIR_PREFIX = 1u << 8,
-    ASMKIT_INST_FLAG_UNSUPPORTED_RELOC = 1u << 9
+    ASMKIT_INST_FLAG_UNSUPPORTED_RELOC = 1u << 9,
+    ASMKIT_INST_FLAG_X86_LOCK = 1u << 10
 } asmkit_inst_flags_t;
 
 typedef struct asmkit_memory_operand {

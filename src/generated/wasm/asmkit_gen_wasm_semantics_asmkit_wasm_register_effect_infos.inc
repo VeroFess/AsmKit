@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_instruction_register_effect_t asmkit_wasm_register_effect_infos[] = {
     {ASMKIT_WASM_TDINST_ABS_F16x8_S, ASMKIT_ARCH_WASM, 0u, ASMKIT_WASM_REG_ARGUMENTS, ASMKIT_REGISTER_EFFECT_IMPLICIT | ASMKIT_REGISTER_EFFECT_WRITE},
     {ASMKIT_WASM_TDINST_ABS_F32_S, ASMKIT_ARCH_WASM, 0u, ASMKIT_WASM_REG_ARGUMENTS, ASMKIT_REGISTER_EFFECT_IMPLICIT | ASMKIT_REGISTER_EFFECT_WRITE},

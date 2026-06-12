@@ -792,6 +792,78 @@ static asmkit_mnemonic_id_t x86_mnemonic_id(const asmkit_engine_t* engine, uint3
     }
 }
 
+static asmkit_mnemonic_id_t x86_jcc_mnemonic_id(uint8_t condition)
+{
+    switch (condition & 0x0fu) {
+    case 0x0u: return ASMKIT_GEN_X86_MNEMONIC_JO_ID;
+    case 0x1u: return ASMKIT_GEN_X86_MNEMONIC_JNO_ID;
+    case 0x2u: return ASMKIT_GEN_X86_MNEMONIC_JB_ID;
+    case 0x3u: return ASMKIT_GEN_X86_MNEMONIC_JAE_ID;
+    case 0x4u: return ASMKIT_GEN_X86_MNEMONIC_JE_ID;
+    case 0x5u: return ASMKIT_GEN_X86_MNEMONIC_JNE_ID;
+    case 0x6u: return ASMKIT_GEN_X86_MNEMONIC_JBE_ID;
+    case 0x7u: return ASMKIT_GEN_X86_MNEMONIC_JA_ID;
+    case 0x8u: return ASMKIT_GEN_X86_MNEMONIC_JS_ID;
+    case 0x9u: return ASMKIT_GEN_X86_MNEMONIC_JNS_ID;
+    case 0xau: return ASMKIT_GEN_X86_MNEMONIC_JP_ID;
+    case 0xbu: return ASMKIT_GEN_X86_MNEMONIC_JNP_ID;
+    case 0xcu: return ASMKIT_GEN_X86_MNEMONIC_JL_ID;
+    case 0xdu: return ASMKIT_GEN_X86_MNEMONIC_JGE_ID;
+    case 0xeu: return ASMKIT_GEN_X86_MNEMONIC_JLE_ID;
+    case 0xfu: return ASMKIT_GEN_X86_MNEMONIC_JG_ID;
+    default: return ASMKIT_GEN_X86_MNEMONIC_OTHER_ID;
+    }
+}
+
+static asmkit_mnemonic_id_t x86_setcc_mnemonic_id(uint8_t condition)
+{
+    switch (condition & 0x0fu) {
+    case 0x0u: return ASMKIT_GEN_X86_MNEMONIC_SETO_ID;
+    case 0x1u: return ASMKIT_GEN_X86_MNEMONIC_SETNO_ID;
+    case 0x2u: return ASMKIT_GEN_X86_MNEMONIC_SETB_ID;
+    case 0x3u: return ASMKIT_GEN_X86_MNEMONIC_SETAE_ID;
+    case 0x4u: return ASMKIT_GEN_X86_MNEMONIC_SETE_ID;
+    case 0x5u: return ASMKIT_GEN_X86_MNEMONIC_SETNE_ID;
+    case 0x6u: return ASMKIT_GEN_X86_MNEMONIC_SETBE_ID;
+    case 0x7u: return ASMKIT_GEN_X86_MNEMONIC_SETA_ID;
+    case 0x8u: return ASMKIT_GEN_X86_MNEMONIC_SETS_ID;
+    case 0x9u: return ASMKIT_GEN_X86_MNEMONIC_SETNS_ID;
+    case 0xau: return ASMKIT_GEN_X86_MNEMONIC_SETP_ID;
+    case 0xbu: return ASMKIT_GEN_X86_MNEMONIC_SETNP_ID;
+    case 0xcu: return ASMKIT_GEN_X86_MNEMONIC_SETL_ID;
+    case 0xdu: return ASMKIT_GEN_X86_MNEMONIC_SETGE_ID;
+    case 0xeu: return ASMKIT_GEN_X86_MNEMONIC_SETLE_ID;
+    case 0xfu: return ASMKIT_GEN_X86_MNEMONIC_SETG_ID;
+    default: return ASMKIT_GEN_X86_MNEMONIC_OTHER_ID;
+    }
+}
+
+static uint32_t x86_inst_prefix_flags(const asmkit_engine_t* engine, const uint8_t* code, uint32_t size)
+{
+    uint32_t flags;
+    uint32_t i;
+    flags = 0u;
+    i = 0u;
+    while (i < size && i < ASMKIT_X86_MAX_PREFIX_BYTES) {
+        uint8_t b = code[i];
+        if (x86_is_legacy_prefix(b)) {
+            if (b == 0xf0u) { flags |= ASMKIT_INST_FLAG_X86_LOCK; }
+            ++i;
+            continue;
+        }
+        if (engine->config.mode == ASMKIT_MODE_X86_64 && b >= 0x40u && b <= 0x4fu) {
+            ++i;
+            continue;
+        }
+        if (engine->config.mode == ASMKIT_MODE_X86_64 && b == 0xd5u && i + 1u < size) {
+            i += 2u;
+            continue;
+        }
+        break;
+    }
+    return flags;
+}
+
 static asmkit_status_t x86_finish(
     const asmkit_engine_t* engine, const uint8_t* code, size_t code_size, uint64_t address,
     asmkit_inst_t* out_inst, uint32_t size, uint32_t id, asmkit_inst_class_t inst_class, uint32_t flags)
@@ -806,6 +878,7 @@ static asmkit_status_t x86_finish(
     out_inst->address = address;
     out_inst->size = size;
     out_inst->flags = flags;
+    out_inst->flags |= x86_inst_prefix_flags(engine, code, size);
     asmkit_copy(out_inst->bytes, code, size);
     return ASMKIT_OK;
 }
@@ -824,6 +897,7 @@ static asmkit_status_t x86_finish_td(
     out_inst->address = address;
     out_inst->size = size;
     out_inst->flags = record->flags;
+    out_inst->flags |= x86_inst_prefix_flags(engine, code, size);
     asmkit_copy(out_inst->bytes, code, size);
     return ASMKIT_OK;
 }
@@ -1050,6 +1124,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_CALL_REL, ASMKIT_INST_DIRECT_CALL, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CALL);
         } else if (opcode >= 0x70u && opcode <= 0x7fu) {
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
+            out_inst->mnemonic_id = x86_jcc_mnemonic_id(opcode);
         } else if (opcode >= 0xe0u && opcode <= 0xe3u) {
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_LOOP_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
         } else {
@@ -1063,6 +1138,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         if (code_size < i + imm_size) { return ASMKIT_ERR_DECODE_FAILED; }
         len = i + imm_size;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
+        out_inst->mnemonic_id = x86_jcc_mnemonic_id(opcode);
         x86_add_pc_operand(out_inst, code + i, imm_size, address, (uint32_t)len);
         return ASMKIT_OK;
     }
@@ -1100,6 +1176,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         if (code_size < i + imm_size) { return ASMKIT_ERR_DECODE_FAILED; }
         len = i + imm_size;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
+        out_inst->mnemonic_id = x86_jcc_mnemonic_id(opcode);
         x86_add_pc_operand(out_inst, code + i, imm_size, address, (uint32_t)len);
         return ASMKIT_OK;
     }
@@ -1244,6 +1321,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         fallback_record.operand_reg_classes[0] = ASMKIT_X86_REGCLASS_GPR;
         fallback_record.operand_kinds[0] = ASMKIT_OP_MEM;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_OTHER, ASMKIT_INST_STORE, 0u);
+        out_inst->mnemonic_id = x86_setcc_mnemonic_id(opcode);
         out_inst->operand_count = 1u;
         x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 0u, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
         return ASMKIT_OK;

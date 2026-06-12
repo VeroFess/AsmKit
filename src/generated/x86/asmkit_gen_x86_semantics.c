@@ -13,7 +13,6 @@
 #define ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL(literal) ((const char*)0)
 #endif
 
-
 #if defined(ASMKIT_GEN_X86_SEMANTICS_REQUIRE_NONEMPTY) && ASMKIT_GEN_X86_SEMANTICS_REQUIRE_NONEMPTY
 typedef char asmkit_gen_x86_requires_nonempty[(ASMKIT_X86_RIP_REL + 1u) > 0u ? 1 : -1];
 #endif

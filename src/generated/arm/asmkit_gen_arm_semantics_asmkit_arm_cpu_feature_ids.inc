@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const uint32_t asmkit_arm_cpu_feature_ids[] = {
     0u,
     0u,

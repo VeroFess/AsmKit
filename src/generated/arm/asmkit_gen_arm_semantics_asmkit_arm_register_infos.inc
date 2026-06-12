@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_register_info_t asmkit_arm_register_infos[] = {
     {ASMKIT_ARM_REG_R0, ASMKIT_ARCH_ARM, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("r0"), 0u, 0u, 32u, ASMKIT_REGISTER_FLAG_RETURN_VALUE},
     {ASMKIT_ARM_REG_R1, ASMKIT_ARCH_ARM, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("r1"), 1u, 0u, 32u, 0u},

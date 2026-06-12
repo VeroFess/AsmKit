@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_arm_td_piece_t asmkit_arm_td_pieces[] = {
     {0u, 0u, 9u},
     {0u, 0u, 9u},

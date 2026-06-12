@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_instruction_register_effect_t asmkit_x86_register_effect_infos[] = {
     {ASMKIT_X86_TDINST_AAA, ASMKIT_ARCH_X86, 0u, ASMKIT_X86_REG_AL, ASMKIT_REGISTER_EFFECT_IMPLICIT | ASMKIT_REGISTER_EFFECT_READ},
     {ASMKIT_X86_TDINST_AAA, ASMKIT_ARCH_X86, 1u, ASMKIT_X86_REG_EFLAGS, ASMKIT_REGISTER_EFFECT_IMPLICIT | ASMKIT_REGISTER_EFFECT_READ | ASMKIT_REGISTER_EFFECT_WRITE},

@@ -1,9 +1,170 @@
+#include <string.h>
+
 #include "test_support.h"
 #include "asmkit/target/aarch64.h"
 #include "asmkit/target/arm.h"
 #include "asmkit/target/bpf.h"
 #include "asmkit/target/wasm.h"
 #include "asmkit/target/x86.h"
+
+static int asmkit_test_x86_jcc_mnemonics(void)
+{
+    static const struct {
+        uint8_t opcode;
+        asmkit_mnemonic_id_t mnemonic;
+    } cases[] = {
+        {0x70u, ASMKIT_X86_JO},
+        {0x71u, ASMKIT_X86_JNO},
+        {0x72u, ASMKIT_X86_JB},
+        {0x73u, ASMKIT_X86_JAE},
+        {0x74u, ASMKIT_X86_JE},
+        {0x75u, ASMKIT_X86_JNE},
+        {0x76u, ASMKIT_X86_JBE},
+        {0x77u, ASMKIT_X86_JA},
+        {0x78u, ASMKIT_X86_JS},
+        {0x79u, ASMKIT_X86_JNS},
+        {0x7au, ASMKIT_X86_JP},
+        {0x7bu, ASMKIT_X86_JNP},
+        {0x7cu, ASMKIT_X86_JL},
+        {0x7du, ASMKIT_X86_JGE},
+        {0x7eu, ASMKIT_X86_JLE},
+        {0x7fu, ASMKIT_X86_JG},
+    };
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        uint8_t bytes[2] = {cases[i].opcode, 0x00u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, bytes, sizeof(bytes), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.size == sizeof(bytes));
+        ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_COND_BRANCH);
+        ASMKIT_CHECK(inst.mnemonic_id == cases[i].mnemonic);
+        ASMKIT_CHECK(inst.operand_count == 1u);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_PC_REL);
+        ASMKIT_CHECK(inst.operands[0].abs_target == 0x1002u);
+    }
+
+    {
+        uint8_t near_jne[] = {0x0fu, 0x85u, 0x00u, 0x00u, 0x00u, 0x00u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, near_jne, sizeof(near_jne), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.size == sizeof(near_jne));
+        ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_COND_BRANCH);
+        ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_JNE);
+        ASMKIT_CHECK(inst.operand_count == 1u);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_PC_REL);
+        ASMKIT_CHECK(inst.operands[0].abs_target == 0x1006u);
+    }
+
+    return 0;
+}
+
+static int asmkit_test_x86_register_modrm_rm_mr_forms(void)
+{
+    static const struct {
+        uint8_t bytes[3];
+        uint8_t size;
+        asmkit_mnemonic_id_t mnemonic;
+        uint32_t dst_reg;
+        uint32_t src_reg;
+        uint32_t width;
+    } cases[] = {
+        {{0x33u, 0xc0u, 0x00u}, 2u, ASMKIT_X86_XOR, ASMKIT_X86_REG_EAX, ASMKIT_X86_REG_EAX, 32u},
+        {{0x41u, 0x0bu, 0xd1u}, 3u, ASMKIT_X86_OR, ASMKIT_X86_REG_EDX, ASMKIT_X86_REG_R9D, 32u},
+        {{0x48u, 0x0bu, 0xc2u}, 3u, ASMKIT_X86_OR, ASMKIT_X86_REG_RAX, ASMKIT_X86_REG_RDX, 64u},
+        {{0x48u, 0x8bu, 0xd0u}, 3u, ASMKIT_X86_MOV, ASMKIT_X86_REG_RDX, ASMKIT_X86_REG_RAX, 64u},
+    };
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, cases[i].bytes, cases[i].size, 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.size == cases[i].size);
+        ASMKIT_CHECK(inst.mnemonic_id == cases[i].mnemonic);
+        ASMKIT_CHECK(inst.operand_count == 2u);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG);
+        ASMKIT_CHECK(inst.operands[0].reg == cases[i].dst_reg);
+        ASMKIT_CHECK(inst.operands[0].width == cases[i].width);
+        ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_REG);
+        ASMKIT_CHECK(inst.operands[1].reg == cases[i].src_reg);
+        ASMKIT_CHECK(inst.operands[1].width == cases[i].width);
+    }
+
+    return 0;
+}
+
+static int asmkit_test_x86_setcc_mnemonics(void)
+{
+    static const struct {
+        uint8_t opcode;
+        asmkit_mnemonic_id_t mnemonic;
+    } cases[] = {
+        {0x90u, ASMKIT_X86_SETO},
+        {0x91u, ASMKIT_X86_SETNO},
+        {0x92u, ASMKIT_X86_SETB},
+        {0x93u, ASMKIT_X86_SETAE},
+        {0x94u, ASMKIT_X86_SETE},
+        {0x95u, ASMKIT_X86_SETNE},
+        {0x96u, ASMKIT_X86_SETBE},
+        {0x97u, ASMKIT_X86_SETA},
+        {0x98u, ASMKIT_X86_SETS},
+        {0x99u, ASMKIT_X86_SETNS},
+        {0x9au, ASMKIT_X86_SETP},
+        {0x9bu, ASMKIT_X86_SETNP},
+        {0x9cu, ASMKIT_X86_SETL},
+        {0x9du, ASMKIT_X86_SETGE},
+        {0x9eu, ASMKIT_X86_SETLE},
+        {0x9fu, ASMKIT_X86_SETG},
+    };
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        uint8_t bytes[3] = {0x0fu, cases[i].opcode, 0xc0u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, bytes, sizeof(bytes), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.size == sizeof(bytes));
+        ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_STORE);
+        ASMKIT_CHECK(inst.mnemonic_id == cases[i].mnemonic);
+        ASMKIT_CHECK(inst.operand_count == 1u);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG);
+        ASMKIT_CHECK(inst.operands[0].reg == ASMKIT_X86_REG_AL);
+        ASMKIT_CHECK(inst.operands[0].width == 8u);
+    }
+
+    return 0;
+}
+
+static int asmkit_test_x86_lock_prefix(void)
+{
+    uint8_t lock_inc_rip[] = {0xf0u, 0xffu, 0x05u, 0x00u, 0x00u, 0x00u, 0x00u};
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, lock_inc_rip, sizeof(lock_inc_rip), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(lock_inc_rip));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_INC);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u);
+    ASMKIT_CHECK(inst.operand_count == 1u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_MEM);
+    ASMKIT_CHECK(inst.operands[0].mem.base == ASMKIT_X86_REG_RIP);
+    ASMKIT_CHECK(inst.operands[0].abs_target == 0x1007u);
+
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "lock inc") == 0);
+    }
+#endif
+
+    return 0;
+}
 
 int asmkit_test_decode(void)
 {
@@ -69,6 +230,11 @@ int asmkit_test_decode(void)
     uint8_t wasm_call[] = {0x10u, 0x01u};
     uint8_t wasm_block_void[] = {0x02u, 0x40u};
     uint8_t wasm_i32x4_add[] = {0xfdu, 0xaeu, 0x01u};
+
+    ASMKIT_CHECK(asmkit_test_x86_jcc_mnemonics() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_register_modrm_rm_mr_forms() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_setcc_mnemonics() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_lock_prefix() == 0);
 
     ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, x86_rip, sizeof(x86_rip), 0x1000u, &inst) == ASMKIT_OK);

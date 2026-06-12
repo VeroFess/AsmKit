@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_operand_type_info_t asmkit_x86_operand_type_infos[] = {
     {0u, ASMKIT_ARCH_X86, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("invalid"), ASMKIT_OP_NONE, ASMKIT_OPERAND_ENCODING_NONE, 0u},
     {1u, ASMKIT_ARCH_X86, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("i8imm"), ASMKIT_OP_IMM, ASMKIT_OPERAND_ENCODING_IMMEDIATE, 8u},

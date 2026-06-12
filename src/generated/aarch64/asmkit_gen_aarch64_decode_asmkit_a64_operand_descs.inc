@@ -3,7 +3,6 @@
  * Do not edit by hand.
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
-
 static const asmkit_a64_td_operand_desc_t asmkit_a64_td_operand_descs[] = {
     {0u, ASMKIT_A64_TD_OPERAND_OPAQUE, 4u, ASMKIT_A64_TD_TRANSFORM_RAW_UNSIGNED, 0u, ASMKIT_A64_TD_REGCLASS_NONE, UINT32_C(0x00000000), UINT32_C(0x00000002)},
     {0u, ASMKIT_A64_TD_OPERAND_REG, 0u, ASMKIT_A64_TD_TRANSFORM_RAW_UNSIGNED, 0u, ASMKIT_A64_TD_REGCLASS_ZTR, UINT32_C(0x00000000), UINT32_C(0x00000000)},
