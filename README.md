@@ -1,0 +1,134 @@
+# ASMKIT
+
+ASMKIT is a C99 toolkit for multi-platform disassembly and structured assembly.
+
+> Status: Pre-1.0. The public C ABI can change before `1.0.0`.
+
+Language: [简体中文](README.zh-cn.md)
+
+## Why this exists
+
+ASMKIT provides a C library for tools that need to inspect, encode, or relocate
+machine-code instructions without linking LLVM. Target data
+is derived from LLVM target records and checked in as generated C tables.
+
+## Features
+
+- Disassembles x86, ARM, AArch64, BPF/eBPF, and WebAssembly byte streams.
+- Assembles structured instruction records through the ASMKIT Easy encoder API.
+- Emits and relocates native prologue code for targets that implement native
+  detour support.
+- Exposes generated target metadata through public C headers.
+- Builds as a static C99 library with C++-compatible headers.
+- Uses caller-provided buffers and avoids dynamic allocation.
+- Provides optional mnemonic text formatting with `ASMKIT_ENABLE_TEXT=ON`.
+
+## Requirements
+
+- CMake 3.20 or later.
+- A C99 compiler supported by the local CMake generator.
+- No LLVM, Python, or C++ dependency is required to build the checked-in source.
+
+Target support is listed in [`docs/target-support.md`](docs/target-support.md).
+
+## Build
+
+```sh
+cmake -S . -B build -D ASMKIT_ENABLE_TESTS=ON
+cmake --build build
+ctest --test-dir build -C Debug --output-on-failure
+```
+
+The default build creates the static library target `asmkit` and the test
+executable `asmkit_core_tests`.
+
+Common CMake options:
+
+| Option | Default | Description |
+|---|---:|---|
+| `ASMKIT_ENABLE_TESTS` | `ON` | Builds `asmkit_core_tests` and the forbidden-symbol scan. |
+| `ASMKIT_ENABLE_TEXT` | `OFF` | Compiles optional mnemonic text formatting tables and code. |
+| `ASMKIT_FREESTANDING` | `ON` | Defines `ASMKIT_FREESTANDING=1` for the public target. |
+| `ASMKIT_ENABLE_ASAN` | `OFF` | Enables AddressSanitizer for supported compilers. |
+
+## Quick start
+
+The recommended entry point is the ASMKIT Easy API in
+[`include/asmkit/asmkit_easy.h`](include/asmkit/asmkit_easy.h), included by
+[`include/asmkit/asmkit.h`](include/asmkit/asmkit.h).
+
+```c
+#include <stdint.h>
+#include "asmkit/asmkit.h"
+
+int main(void)
+{
+    asmkit_decoder_t decoder;
+    asmkit_inst_t inst;
+    uint8_t code[] = {0x90};
+
+    if (asmkit_decoder_init(&decoder, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64) != ASMKIT_OK) {
+        return 1;
+    }
+    if (asmkit_decoder_decode_full(&decoder, code, sizeof(code), 0x1000u, &inst) != ASMKIT_OK) {
+        return 1;
+    }
+    return inst.size == 1u ? 0 : 1;
+}
+```
+
+CMake target:
+
+```cmake
+add_subdirectory(path/to/asmkit)
+target_link_libraries(my_tool PRIVATE asmkit)
+```
+
+## Documentation
+
+- [`docs/index.md`](docs/index.md): documentation entry point.
+- [`docs/easy-api.md`](docs/easy-api.md): recommended decode, encode, branch
+  emit, and formatting API.
+- [`docs/api-reference.md`](docs/api-reference.md): other public C APIs.
+- [`docs/target-support.md`](docs/target-support.md): target modes and current
+  capability boundaries.
+- [`docs/generated-data.md`](docs/generated-data.md): LLVM-derived generated
+  data and modified TableGen pipeline notes.
+- [`docs/execution-model.md`](docs/execution-model.md): memory ownership,
+  concurrency, and freestanding behavior.
+- [`docs/license.md`](docs/license.md): project and generated-file licensing.
+- [`docs/acknowledgements.md`](docs/acknowledgements.md): upstream projects
+  acknowledged by ASMKIT.
+
+Simplified Chinese documentation starts at
+[`README.zh-cn.md`](README.zh-cn.md).
+
+## Development
+
+Local validation command set:
+
+```sh
+cmake -S . -B build -D ASMKIT_ENABLE_TESTS=ON
+cmake --build build
+ctest --test-dir build -C Debug --output-on-failure
+```
+
+The test target includes instruction corpus tests, Easy API tests, analysis,
+encode, relocation, concurrency, and a CMake scan that rejects dynamic
+allocation, file I/O, and common blocking primitives.
+
+## Acknowledgements
+
+AsmKit target data is derived from LLVM target records. Some test corpus entries
+are converted by project scripts from test material in Zydis, Capstone, and
+AsmJit. See [`docs/acknowledgements.md`](docs/acknowledgements.md).
+
+## License
+
+Project-owned source and documentation files are licensed under the MIT
+License. See [`LICENSE`](LICENSE).
+
+LLVM-derived generated files under `src/generated/` and
+`include/asmkit/target/` are marked `Apache-2.0 WITH LLVM-exception`. See
+[`docs/license.md`](docs/license.md) and the LLVM license at
+<https://llvm.org/LICENSE.txt>.

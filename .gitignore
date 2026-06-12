@@ -1,0 +1,41 @@
+# Build trees and CMake in-source output.
+/build/
+/build-*/
+/out/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/CTestTestfile.cmake
+/DartConfiguration.tcl
+/Testing/
+
+# Visual Studio and compiler output.
+/.vs/
+/*.sln
+/*.vcxproj
+/*.vcxproj.filters
+/*.vcxproj.user
+/Debug/
+/Release/
+/RelWithDebInfo/
+/MinSizeRel/
+*.obj
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Editor and OS noise.
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Accepted generated runtime sources are part of the runtime repository.
+!/src/generated/
+!/src/generated/**
+!/include/asmkit/target/
+!/include/asmkit/target/**
