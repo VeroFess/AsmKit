@@ -31,6 +31,40 @@ static void asmkit_text_builder_append_cstr(asmkit_text_builder_t* builder, cons
     }
 }
 
+static int asmkit_text_cstr_eq(const char* left, const char* right)
+{
+    uint32_t i;
+
+    if (left == 0 || right == 0) {
+        return 0;
+    }
+    i = 0u;
+    while (left[i] != '\0' && right[i] != '\0') {
+        if (left[i] != right[i]) {
+            return 0;
+        }
+        ++i;
+    }
+    return left[i] == right[i];
+}
+
+static int asmkit_text_cstr_starts_with(const char* text, const char* prefix)
+{
+    uint32_t i;
+
+    if (text == 0 || prefix == 0) {
+        return 0;
+    }
+    i = 0u;
+    while (prefix[i] != '\0') {
+        if (text[i] != prefix[i]) {
+            return 0;
+        }
+        ++i;
+    }
+    return 1;
+}
+
 static void asmkit_text_builder_append_unsigned_dec(asmkit_text_builder_t* builder, uint64_t value)
 {
     char digits[20];
@@ -210,6 +244,103 @@ static void asmkit_text_append_operand(asmkit_text_builder_t* builder, const asm
     }
 }
 
+static const char* asmkit_text_aarch64_condition_name(uint32_t condition)
+{
+    static const char* names[16] = {
+        "eq", "ne", "hs", "lo", "mi", "pl", "vs", "vc",
+        "hi", "ls", "ge", "lt", "gt", "le", "al", "nv"
+    };
+    return condition < 16u ? names[condition] : 0;
+}
+
+static int asmkit_text_append_arm_conditional_branch_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    const char* condition_name;
+    uint32_t condition;
+    uint32_t word;
+    uint16_t h1;
+    uint16_t h2;
+
+    if (inst->arch != ASMKIT_ARCH_ARM ||
+        !asmkit_text_cstr_eq(mnemonic, "b") ||
+        (inst->flags & ASMKIT_INST_FLAG_CONDITIONAL) == 0u) {
+        return 0;
+    }
+    condition = 0xffu;
+    if (inst->mode == ASMKIT_MODE_ARM_A32 && inst->size >= 4u) {
+        word = asmkit_load32le(inst->bytes);
+        condition = word >> 28u;
+    } else if (inst->mode == ASMKIT_MODE_ARM_THUMB && inst->size >= 2u) {
+        h1 = asmkit_load16le(inst->bytes);
+        if ((h1 & 0xf000u) == 0xd000u) {
+            condition = (uint32_t)((h1 >> 8u) & 0x0fu);
+        } else if (inst->size >= 4u) {
+            h2 = asmkit_load16le(inst->bytes + 2u);
+            if ((h1 & 0xf800u) == 0xf000u && (h2 & 0xd000u) == 0x8000u) {
+                condition = (uint32_t)((h1 >> 6u) & 0x0fu);
+            }
+        }
+    }
+    if (condition >= 0x0eu) {
+        return 0;
+    }
+    condition_name = asmkit_text_aarch64_condition_name(condition);
+    if (condition_name == 0) {
+        return 0;
+    }
+    asmkit_text_builder_append_cstr(builder, "b");
+    asmkit_text_builder_append_cstr(builder, condition_name);
+    return 1;
+}
+
+static int asmkit_text_append_arm_cps_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    if (inst->arch != ASMKIT_ARCH_ARM ||
+        !asmkit_text_cstr_eq(mnemonic, "cps") ||
+        inst->operand_count == 0u ||
+        inst->operands[0].kind != ASMKIT_OP_IMM) {
+        return 0;
+    }
+    if (inst->operands[0].imm == 1) {
+        asmkit_text_builder_append_cstr(builder, "cpsid");
+        return 1;
+    }
+    if (inst->operands[0].imm == 0) {
+        asmkit_text_builder_append_cstr(builder, "cpsie");
+        return 1;
+    }
+    return 0;
+}
+
+static int asmkit_text_append_aarch64_conditional_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    const char* condition;
+
+    if (inst->arch != ASMKIT_ARCH_AARCH64 ||
+        !asmkit_text_cstr_eq(mnemonic, "b") ||
+        (inst->flags & ASMKIT_INST_FLAG_CONDITIONAL) == 0u ||
+        inst->operand_count == 0u ||
+        inst->operands[0].kind != ASMKIT_OP_IMM) {
+        return 0;
+    }
+    condition = asmkit_text_aarch64_condition_name((uint32_t)inst->operands[0].imm);
+    if (condition == 0) {
+        return 0;
+    }
+    asmkit_text_builder_append_cstr(builder, "b.");
+    asmkit_text_builder_append_cstr(builder, condition);
+    return 1;
+}
+
 static asmkit_status_t asmkit_text_format_with_operands(
     const char* mnemonic,
     const asmkit_inst_t* inst,
@@ -226,7 +357,20 @@ static asmkit_status_t asmkit_text_format_with_operands(
     if (inst->arch == ASMKIT_ARCH_X86 && (inst->flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u) {
         asmkit_text_builder_append_cstr(&builder, "lock ");
     }
-    asmkit_text_builder_append_cstr(&builder, mnemonic);
+    if (inst->arch == ASMKIT_ARCH_X86 && (inst->flags & ASMKIT_INST_FLAG_X86_REPNE) != 0u) {
+        asmkit_text_builder_append_cstr(&builder, "repne ");
+    } else if (inst->arch == ASMKIT_ARCH_X86 && (inst->flags & ASMKIT_INST_FLAG_X86_REP) != 0u) {
+        if (asmkit_text_cstr_starts_with(mnemonic, "cmps") || asmkit_text_cstr_starts_with(mnemonic, "scas")) {
+            asmkit_text_builder_append_cstr(&builder, "repe ");
+        } else {
+            asmkit_text_builder_append_cstr(&builder, "rep ");
+        }
+    }
+    if (!asmkit_text_append_arm_cps_mnemonic(&builder, mnemonic, inst) &&
+        !asmkit_text_append_arm_conditional_branch_mnemonic(&builder, mnemonic, inst) &&
+        !asmkit_text_append_aarch64_conditional_mnemonic(&builder, mnemonic, inst)) {
+        asmkit_text_builder_append_cstr(&builder, mnemonic);
+    }
 #if ASMKIT_TEXT_ENABLE_OPERANDS
     if (inst->arch == ASMKIT_ARCH_BPF && inst->operand_count > 0u) {
         uint32_t i;
@@ -271,7 +415,7 @@ asmkit_status_t asmkit_format_inst(
     case ASMKIT_ARCH_WASM: mnemonic = asmkit_gen_wasm_mnemonic(text_id); break;
     default: return ASMKIT_ERR_UNSUPPORTED_ARCH;
     }
-    if (inst->operand_count == 0u && (inst->flags & ASMKIT_INST_FLAG_X86_LOCK) == 0u) {
+    if (inst->operand_count == 0u && (inst->flags & (ASMKIT_INST_FLAG_X86_LOCK | ASMKIT_INST_FLAG_X86_REP | ASMKIT_INST_FLAG_X86_REPNE)) == 0u) {
         return asmkit_text_copy(mnemonic, out_text, out_capacity, out_result);
     }
     return asmkit_text_format_with_operands(mnemonic, inst, out_text, out_capacity, out_result);

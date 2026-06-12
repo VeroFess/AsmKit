@@ -649,6 +649,29 @@ static int x86_td_ad_size_matches(const asmkit_x86_td_record_t* record, uint16_t
     return record->ad_size == ASMKIT_X86_TD_ADSIZE_ANY || record->ad_size == address_width;
 }
 
+static int x86_is_repeatable_string_opcode(uint8_t opcode)
+{
+    switch (opcode) {
+    case 0x6cu:
+    case 0x6du:
+    case 0x6eu:
+    case 0x6fu:
+    case 0xa4u:
+    case 0xa5u:
+    case 0xa6u:
+    case 0xa7u:
+    case 0xaau:
+    case 0xabu:
+    case 0xacu:
+    case 0xadu:
+    case 0xaeu:
+    case 0xafu:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 static int x86_td_prefix_matches(const asmkit_x86_td_record_t* record, int prefix_66, int prefix_f2, int prefix_f3, const asmkit_x86_prefix_state_t* prefix)
 {
     if (record->vector_type != ASMKIT_X86_TD_ENC_NORMAL) {
@@ -658,6 +681,7 @@ static int x86_td_prefix_matches(const asmkit_x86_td_record_t* record, int prefi
     if (record->mandatory_prefix == 0x66u) { return prefix_66 != 0; }
     if (record->mandatory_prefix == 0xf2u) { return prefix_f2 != 0; }
     if (record->mandatory_prefix == 0xf3u) { return prefix_f3 != 0; }
+    if ((prefix_f2 != 0 || prefix_f3 != 0) && x86_is_repeatable_string_opcode(record->opcode)) { return 1; }
     return record->allow_hle_prefix != 0u || (prefix_f2 == 0 && prefix_f3 == 0);
 }
 
@@ -838,16 +862,45 @@ static asmkit_mnemonic_id_t x86_setcc_mnemonic_id(uint8_t condition)
     }
 }
 
+static asmkit_mnemonic_id_t x86_cmovcc_mnemonic_id(uint8_t condition)
+{
+    switch (condition & 0x0fu) {
+    case 0x0u: return ASMKIT_GEN_X86_MNEMONIC_CMOVO_ID;
+    case 0x1u: return ASMKIT_GEN_X86_MNEMONIC_CMOVNO_ID;
+    case 0x2u: return ASMKIT_GEN_X86_MNEMONIC_CMOVB_ID;
+    case 0x3u: return ASMKIT_GEN_X86_MNEMONIC_CMOVAE_ID;
+    case 0x4u: return ASMKIT_GEN_X86_MNEMONIC_CMOVE_ID;
+    case 0x5u: return ASMKIT_GEN_X86_MNEMONIC_CMOVNE_ID;
+    case 0x6u: return ASMKIT_GEN_X86_MNEMONIC_CMOVBE_ID;
+    case 0x7u: return ASMKIT_GEN_X86_MNEMONIC_CMOVA_ID;
+    case 0x8u: return ASMKIT_GEN_X86_MNEMONIC_CMOVS_ID;
+    case 0x9u: return ASMKIT_GEN_X86_MNEMONIC_CMOVNS_ID;
+    case 0xau: return ASMKIT_GEN_X86_MNEMONIC_CMOVP_ID;
+    case 0xbu: return ASMKIT_GEN_X86_MNEMONIC_CMOVNP_ID;
+    case 0xcu: return ASMKIT_GEN_X86_MNEMONIC_CMOVL_ID;
+    case 0xdu: return ASMKIT_GEN_X86_MNEMONIC_CMOVGE_ID;
+    case 0xeu: return ASMKIT_GEN_X86_MNEMONIC_CMOVLE_ID;
+    case 0xfu: return ASMKIT_GEN_X86_MNEMONIC_CMOVG_ID;
+    default: return ASMKIT_GEN_X86_MNEMONIC_OTHER_ID;
+    }
+}
+
 static uint32_t x86_inst_prefix_flags(const asmkit_engine_t* engine, const uint8_t* code, uint32_t size)
 {
     uint32_t flags;
     uint32_t i;
+    int prefix_f2;
+    int prefix_f3;
     flags = 0u;
     i = 0u;
+    prefix_f2 = 0;
+    prefix_f3 = 0;
     while (i < size && i < ASMKIT_X86_MAX_PREFIX_BYTES) {
         uint8_t b = code[i];
         if (x86_is_legacy_prefix(b)) {
             if (b == 0xf0u) { flags |= ASMKIT_INST_FLAG_X86_LOCK; }
+            else if (b == 0xf2u) { prefix_f2 = 1; }
+            else if (b == 0xf3u) { prefix_f3 = 1; }
             ++i;
             continue;
         }
@@ -860,6 +913,10 @@ static uint32_t x86_inst_prefix_flags(const asmkit_engine_t* engine, const uint8
             continue;
         }
         break;
+    }
+    if (i < size && x86_is_repeatable_string_opcode(code[i])) {
+        if (prefix_f2 != 0) { flags |= ASMKIT_INST_FLAG_X86_REPNE; }
+        else if (prefix_f3 != 0) { flags |= ASMKIT_INST_FLAG_X86_REP; }
     }
     return flags;
 }
@@ -1106,7 +1163,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && prefix_f3 && opcode_map == 1u && opcode == 0x1eu && i < code_size && (code[i] == 0xfau || code[i] == 0xfbu)) {
         return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)(i + 1u), ASMKIT_X86_ENDBR, ASMKIT_INST_CET_ENDBR, 0u);
     }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && opcode == 0x90u) {
+    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && opcode == 0x90u && !prefix_f2 && !prefix_f3) {
         return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)i, ASMKIT_X86_NOP, ASMKIT_INST_NOP, 0u);
     }
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && (opcode == 0xc3u || opcode == 0xcbu)) {
@@ -1311,6 +1368,25 @@ asmkit_status_t asmkit_gen_x86_decode_one(
             out_inst->flags |= ASMKIT_INST_FLAG_PC_RELATIVE;
             if (out_inst->operand_count == 0u) { x86_add_pc_operand(out_inst, code + disp_offset, 4u, address, (uint32_t)len); }
         }
+        return ASMKIT_OK;
+    }
+    if (td_record == 0 && prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0x40u && opcode <= 0x4fu) {
+        asmkit_x86_td_record_t fallback_record;
+        uint16_t width;
+        width = prefix_66 ? 16u : ((engine->config.mode == ASMKIT_MODE_X86_64 && rex_w) ? 64u : 32u);
+        asmkit_zero(&fallback_record, sizeof(fallback_record));
+        fallback_record.operand_count = 2u;
+        fallback_record.operand_widths[0] = width;
+        fallback_record.operand_widths[1] = width;
+        fallback_record.operand_reg_classes[0] = ASMKIT_X86_REGCLASS_GPR;
+        fallback_record.operand_reg_classes[1] = ASMKIT_X86_REGCLASS_GPR;
+        fallback_record.operand_kinds[0] = ASMKIT_OP_REG;
+        fallback_record.operand_kinds[1] = ASMKIT_OP_MEM;
+        (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_OTHER, ASMKIT_INST_ALU, ASMKIT_INST_FLAG_CONDITIONAL);
+        out_inst->mnemonic_id = x86_cmovcc_mnemonic_id(opcode);
+        out_inst->operand_count = 2u;
+        x86_decode_set_reg_operand(out_inst, 0u, x86_gpr_from_encoding((uint8_t)(reg | (rex_r ? 8u : 0u)), width, rex_seen), width);
+        x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 1u, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
         return ASMKIT_OK;
     }
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0x90u && opcode <= 0x9fu) {

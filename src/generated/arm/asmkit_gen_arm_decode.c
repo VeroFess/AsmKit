@@ -1395,6 +1395,7 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
     const asmkit_arm_td_record_t* td_record;
     uint32_t w;
     uint32_t shared_w;
+    uint32_t cond;
     uint16_t h1;
     uint16_t h2;
     int64_t disp;
@@ -1416,7 +1417,8 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
         arm_add_pc_operand(out_inst, disp, address + (uint64_t)disp, 11u);
         return ASMKIT_OK;
     }
-    if ((h1 & 0xf000u) == 0xd000u && (h1 & 0x0f00u) != 0x0f00u) {
+    cond = (uint32_t)((h1 >> 8u) & 0x0fu);
+    if ((h1 & 0xf000u) == 0xd000u && cond < 0x0eu) {
         disp = arm_sign_extend(h1 & 0x00ffu, 8u) << 1;
         disp += 4;
         (void)arm_finish(engine, code, address, out_inst, 2u, ASMKIT_THUMB_B_COND, ASMKIT_INST_COND_BRANCH,

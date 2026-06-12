@@ -15,7 +15,7 @@ extern "C" {
 
 #include "aarch64_asmkit_aarch64_mnemonic.inc"
 
-#define ASMKIT_AARCH64_MNEMONIC_COUNT 1502u
+#define ASMKIT_AARCH64_MNEMONIC_COUNT 1574u
 
 /* Target register IDs are stable metadata/operand register IDs. */
 #include "aarch64_asmkit_aarch64_register.inc"

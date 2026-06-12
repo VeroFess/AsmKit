@@ -27,6 +27,14 @@
 *.lib
 *.exp
 
+# Python cache output.
+*.py[cod]
+__pycache__/
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
 # Editor and OS noise.
 *.swp
 *.swo

@@ -15,7 +15,7 @@ extern "C" {
 
 #include "x86_asmkit_x86_mnemonic.inc"
 
-#define ASMKIT_X86_MNEMONIC_COUNT 1872u
+#define ASMKIT_X86_MNEMONIC_COUNT 1880u
 
 /* Target register IDs are stable metadata/operand register IDs. */
 #include "x86_asmkit_x86_register.inc"

@@ -166,6 +166,139 @@ static int asmkit_test_x86_lock_prefix(void)
     return 0;
 }
 
+static int asmkit_test_x86_rep_string_prefixes(void)
+{
+    uint8_t rep_movsw[] = {0xf3u, 0x66u, 0xa5u};
+    uint8_t repne_scasb[] = {0xf2u, 0xaeu};
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_32);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, rep_movsw, sizeof(rep_movsw), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(rep_movsw));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_MOVSW);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_X86_REP) != 0u);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_X86_REPNE) == 0u);
+    ASMKIT_CHECK(inst.operand_count == 2u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_MEM && inst.operands[0].width == 16u);
+    ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_MEM && inst.operands[1].width == 16u);
+
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "rep movsw") == 0);
+    }
+#endif
+
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, repne_scasb, sizeof(repne_scasb), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(repne_scasb));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_SCASB);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_X86_REPNE) != 0u);
+    ASMKIT_CHECK(inst.operand_count == 1u);
+
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "repne scasb") == 0);
+    }
+#endif
+
+    return 0;
+}
+
+static int asmkit_test_x86_cmovcc_mnemonics(void)
+{
+    static const struct {
+        uint8_t opcode;
+        asmkit_mnemonic_id_t mnemonic;
+    } cases[] = {
+        {0x40u, ASMKIT_X86_CMOVO},
+        {0x41u, ASMKIT_X86_CMOVNO},
+        {0x42u, ASMKIT_X86_CMOVB},
+        {0x43u, ASMKIT_X86_CMOVAE},
+        {0x44u, ASMKIT_X86_CMOVE},
+        {0x45u, ASMKIT_X86_CMOVNE},
+        {0x46u, ASMKIT_X86_CMOVBE},
+        {0x47u, ASMKIT_X86_CMOVA},
+        {0x48u, ASMKIT_X86_CMOVS},
+        {0x49u, ASMKIT_X86_CMOVNS},
+        {0x4au, ASMKIT_X86_CMOVP},
+        {0x4bu, ASMKIT_X86_CMOVNP},
+        {0x4cu, ASMKIT_X86_CMOVL},
+        {0x4du, ASMKIT_X86_CMOVGE},
+        {0x4eu, ASMKIT_X86_CMOVLE},
+        {0x4fu, ASMKIT_X86_CMOVG},
+    };
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+        uint8_t bytes[3] = {0x0fu, cases[i].opcode, 0xc1u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, bytes, sizeof(bytes), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.size == sizeof(bytes));
+        ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_ALU);
+        ASMKIT_CHECK(inst.mnemonic_id == cases[i].mnemonic);
+        ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_CONDITIONAL) != 0u);
+        ASMKIT_CHECK(inst.operand_count == 2u);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG && inst.operands[0].reg == ASMKIT_X86_REG_EAX && inst.operands[0].width == 32u);
+        ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_REG && inst.operands[1].reg == ASMKIT_X86_REG_ECX && inst.operands[1].width == 32u);
+    }
+
+    {
+        uint8_t cmove64[] = {0x48u, 0x0fu, 0x44u, 0xc1u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, cmove64, sizeof(cmove64), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_CMOVE);
+        ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG && inst.operands[0].reg == ASMKIT_X86_REG_RAX && inst.operands[0].width == 64u);
+        ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_REG && inst.operands[1].reg == ASMKIT_X86_REG_RCX && inst.operands[1].width == 64u);
+    }
+
+    return 0;
+}
+
+static int asmkit_test_x86_prefix_alias_mnemonics(void)
+{
+    uint8_t pause_bytes[] = {0xf3u, 0x90u};
+    uint8_t rex_push_rbx[] = {0x48u, 0x53u};
+    asmkit_engine_t engine;
+    asmkit_inst_t inst;
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, pause_bytes, sizeof(pause_bytes), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(pause_bytes));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_PAUSE);
+    ASMKIT_CHECK(inst.operand_count == 0u);
+
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, rex_push_rbx, sizeof(rex_push_rbx), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(rex_push_rbx));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_PUSH);
+    ASMKIT_CHECK(inst.operand_count == 1u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG);
+    ASMKIT_CHECK(inst.operands[0].reg == ASMKIT_X86_REG_RBX);
+    ASMKIT_CHECK(inst.operands[0].width == 64u);
+
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "push") == 0);
+    }
+#endif
+
+    return 0;
+}
+
 int asmkit_test_decode(void)
 {
     asmkit_engine_t engine;
@@ -192,6 +325,7 @@ int asmkit_test_decode(void)
         0x48u, 0xa1u, 0x88u, 0x77u, 0x66u, 0x55u, 0x44u, 0x33u, 0x22u, 0x11u
     };
     uint8_t a64_b[] = {0x04u, 0x00u, 0x00u, 0x14u};
+    uint8_t a64_b_ne[] = {0xa1u, 0x03u, 0x00u, 0x54u};
     uint8_t a64_ret[] = {0xc0u, 0x03u, 0x5fu, 0xd6u};
     uint8_t a64_nop[] = {0x1fu, 0x20u, 0x03u, 0xd5u};
     uint8_t a64_bti[] = {0x1fu, 0x24u, 0x03u, 0xd5u};
@@ -210,6 +344,11 @@ int asmkit_test_decode(void)
     uint8_t arm_aesd[] = {0x40u, 0x03u, 0xb0u, 0xf3u};
     uint8_t thumb_add_r0_imm1[] = {0x40u, 0x1cu};
     uint8_t thumb_b_zero[] = {0x00u, 0xe0u};
+    uint8_t thumb_bhs[] = {0x07u, 0xd2u};
+    uint8_t thumb_bne_w[] = {0x40u, 0xf0u, 0xf8u, 0x80u};
+    uint8_t thumb_trap[] = {0xfeu, 0xdeu};
+    uint8_t thumb_cpsid_i[] = {0x72u, 0xb6u};
+    uint8_t thumb_cpsie_i[] = {0x62u, 0xb6u};
     uint8_t thumb_mov_r0_r1[] = {0x08u, 0x46u};
     uint8_t thumb_add_w_r8_r9_imm5[] = {0x09u, 0xf1u, 0x05u, 0x08u};
     uint8_t thumb_mov_w_r2_imm80000000[] = {0x4fu, 0xf0u, 0x00u, 0x42u};
@@ -235,6 +374,9 @@ int asmkit_test_decode(void)
     ASMKIT_CHECK(asmkit_test_x86_register_modrm_rm_mr_forms() == 0);
     ASMKIT_CHECK(asmkit_test_x86_setcc_mnemonics() == 0);
     ASMKIT_CHECK(asmkit_test_x86_lock_prefix() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_rep_string_prefixes() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_cmovcc_mnemonics() == 0);
+    ASMKIT_CHECK(asmkit_test_x86_prefix_alias_mnemonics() == 0);
 
     ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64);
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, x86_rip, sizeof(x86_rip), 0x1000u, &inst) == ASMKIT_OK);
@@ -374,6 +516,23 @@ int asmkit_test_decode(void)
     ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_DIRECT_BRANCH);
     ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_AARCH64_B);
     ASMKIT_CHECK(inst.operands[0].abs_target == 0x1010u);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, a64_b_ne, sizeof(a64_b_ne), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_COND_BRANCH);
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_AARCH64_B);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_CONDITIONAL) != 0u);
+    ASMKIT_CHECK(inst.operand_count == 2u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_IMM && inst.operands[0].imm == 1);
+    ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_PC_REL);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "b.ne") == 0);
+    }
+#endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, a64_ret, sizeof(a64_ret), 0x1000u, &inst) == ASMKIT_OK);
     ASMKIT_CHECK(inst.size == sizeof(a64_ret));
     ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_RETURN);
@@ -528,6 +687,83 @@ int asmkit_test_decode(void)
     ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_B);
     ASMKIT_CHECK(inst.operand_count > 0u);
     ASMKIT_CHECK(inst.operands[0].abs_target == 0x1004u);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_bhs, sizeof(thumb_bhs), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(thumb_bhs));
+    ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_COND_BRANCH);
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_B);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_CONDITIONAL) != 0u);
+    ASMKIT_CHECK(inst.operand_count > 0u);
+    ASMKIT_CHECK(inst.operands[0].abs_target == 0x1012u);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "bhs") == 0);
+    }
+#endif
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_bne_w, sizeof(thumb_bne_w), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(thumb_bne_w));
+    ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_COND_BRANCH);
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_B);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_CONDITIONAL) != 0u);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "bne") == 0);
+    }
+#endif
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_trap, sizeof(thumb_trap), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(thumb_trap));
+    ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_OTHER);
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_TRAP);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_CONDITIONAL) == 0u);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "trap") == 0);
+    }
+#endif
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_cpsid_i, sizeof(thumb_cpsid_i), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(thumb_cpsid_i));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_CPS);
+    ASMKIT_CHECK(inst.operand_count == 2u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_IMM && inst.operands[0].imm == 1);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "cpsid") == 0);
+    }
+#endif
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_cpsie_i, sizeof(thumb_cpsie_i), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.size == sizeof(thumb_cpsie_i));
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_CPS);
+    ASMKIT_CHECK(inst.operand_count == 2u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_IMM && inst.operands[0].imm == 0);
+#if ASMKIT_ENABLE_TEXT
+    {
+        asmkit_formatter_t formatter;
+        asmkit_text_result_t text_result;
+        char text[32];
+        ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
+        ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+        ASMKIT_CHECK(strcmp(text, "cpsie") == 0);
+    }
+#endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_mov_r0_r1, sizeof(thumb_mov_r0_r1), 0x1000u, &inst) == ASMKIT_OK);
     ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_ALU);
     ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_ARM_MOV);
