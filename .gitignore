@@ -47,3 +47,4 @@ Thumbs.db
 !/src/generated/**
 !/include/asmkit/target/
 !/include/asmkit/target/**
+tests/instruction_corpus/instruction_corpus_manifest.json

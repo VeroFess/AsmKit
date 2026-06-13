@@ -89,6 +89,8 @@ typedef struct asmkit_x86_encode_record {
     uint8_t opcode_reg_operand;
     uint8_t fixed_accumulator_operand;
     uint8_t fixed_dx_operand;
+    uint8_t fixed_register_operand;
+    uint32_t fixed_register_id;
     uint8_t vvvv_operand;
     uint8_t evex_mask_operand;
     uint8_t round_operand;
@@ -958,6 +960,16 @@ static asmkit_status_t x86_encode_record_bytes(const asmkit_engine_t* engine, co
     }
     if (record->fixed_dx_operand < record->operand_count && !x86_operand_is_dx(&inst->operands[record->fixed_dx_operand])) {
         return ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
+    }
+    if (record->fixed_register_operand < record->operand_count) {
+        const asmkit_operand_t* operand;
+        uint16_t width;
+        operand = &inst->operands[record->fixed_register_operand];
+        width = record->operand_widths[record->fixed_register_operand];
+        if (operand->kind != ASMKIT_OP_REG || operand->reg != record->fixed_register_id ||
+            (width != 0u && operand->width != 0u && operand->width != width)) {
+            return ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
+        }
     }
     if (record->vvvv_operand < record->operand_count) {
         if (!x86_reg_operand_value(engine, &inst->operands[record->vvvv_operand], record->operand_widths[record->vvvv_operand], record->operand_reg_classes[record->vvvv_operand], &vvvv)) {

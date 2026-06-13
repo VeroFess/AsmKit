@@ -11,7 +11,7 @@
     } \
 } while (0)
 
-static uint32_t asmkit_test_load32le(const uint8_t* p)
+static inline uint32_t asmkit_test_load32le(const uint8_t* p)
 {
     return ((uint32_t)p[0]) |
            ((uint32_t)p[1] << 8) |
@@ -19,13 +19,13 @@ static uint32_t asmkit_test_load32le(const uint8_t* p)
            ((uint32_t)p[3] << 24);
 }
 
-static uint64_t asmkit_test_load64le(const uint8_t* p)
+static inline uint64_t asmkit_test_load64le(const uint8_t* p)
 {
     return ((uint64_t)asmkit_test_load32le(p)) |
            ((uint64_t)asmkit_test_load32le(p + 4) << 32);
 }
 
-static int asmkit_test_init_engine(asmkit_engine_t* engine, asmkit_arch_t arch, asmkit_mode_t mode)
+static inline int asmkit_test_init_engine(asmkit_engine_t* engine, asmkit_arch_t arch, asmkit_mode_t mode)
 {
     asmkit_engine_config_t config;
     if (asmkit_engine_config_init(&config, arch, mode) != ASMKIT_OK) {

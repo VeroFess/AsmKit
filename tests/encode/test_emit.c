@@ -1111,7 +1111,7 @@ int asmkit_test_emit(void)
     ASMKIT_CHECK((inst.operands[0].flags & ASMKIT_OPERAND_FLAG_REGISTER_PAIR) != 0u);
     ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_REG && inst.operands[1].reg == ASMKIT_AARCH64_REG_W2);
     ASMKIT_CHECK((inst.operands[1].flags & ASMKIT_OPERAND_FLAG_REGISTER_PAIR) != 0u);
-    ASMKIT_CHECK(inst.operands[2].kind == ASMKIT_OP_REG && inst.operands[2].reg == ASMKIT_AARCH64_REG_X3);
+    ASMKIT_CHECK(inst.operands[2].kind == ASMKIT_OP_MEM && inst.operands[2].mem.base == ASMKIT_AARCH64_REG_X3);
 
     asmkit_inst_init(&inst, ASMKIT_ARCH_AARCH64, ASMKIT_MODE_AARCH64, ASMKIT_AARCH64_SYSP);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_imm(2, 32u)) == ASMKIT_OK);
@@ -1146,13 +1146,14 @@ int asmkit_test_emit(void)
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_reg(ASMKIT_AARCH64_REG_Z0, 128u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 1u, asmkit_operand_reg(ASMKIT_AARCH64_REG_P0, 0u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 2u, asmkit_operand_reg(ASMKIT_AARCH64_REG_ZAB0, 8u)) == ASMKIT_OK);
-    ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 3u, asmkit_operand_imm(0, 32u)) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 3u, asmkit_operand_reg(ASMKIT_AARCH64_REG_W12, 32u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 4u, asmkit_operand_imm(0, 32u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
     ASMKIT_CHECK(encode_result.size == 4u && asmkit_test_load32le(out) == 0xc0020000u);
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, out, encode_result.size, 0x1000u, &inst) == ASMKIT_OK);
     ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_AARCH64_MOVA && inst.operand_count == 5u);
     ASMKIT_CHECK(inst.operands[2].kind == ASMKIT_OP_REG && inst.operands[2].reg == ASMKIT_AARCH64_REG_ZAB0);
+    ASMKIT_CHECK(inst.operands[3].kind == ASMKIT_OP_REG && inst.operands[3].reg == ASMKIT_AARCH64_REG_W12);
 
     asmkit_inst_init(&inst, ASMKIT_ARCH_AARCH64, ASMKIT_MODE_AARCH64, ASMKIT_AARCH64_MSR);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_opaque(ASMKIT_AARCH64_PSTATE_DAIFSET, 6u)) == ASMKIT_OK);

@@ -20,13 +20,11 @@ typedef struct asmkit_arm_fixed_encode_record {
 } asmkit_arm_fixed_encode_record_t;
 
 static const asmkit_arm_fixed_encode_record_t asmkit_arm_fixed_encode_records[] = {
-    {ASMKIT_ARM_TDINST_SB, ASMKIT_MNEMONIC_ARM_BASE + 179u, UINT32_C(0xf57ff070), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000000002000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_TRAP, ASMKIT_MNEMONIC_ARM_BASE + 296u, UINT32_C(0xe7ffdefe), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_TSB, ASMKIT_MNEMONIC_ARM_BASE + 297u, UINT32_C(0xe320f012), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0800000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_BX_RET, ASMKIT_MNEMONIC_ARM_BASE + 29u, UINT32_C(0xe12fff1e), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000100000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_CLREX, ASMKIT_MNEMONIC_ARM_BASE + 37u, UINT32_C(0xf57ff01f), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000800000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_ERET, ASMKIT_MNEMONIC_ARM_BASE + 77u, UINT32_C(0xe160006e), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000010000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
-    {ASMKIT_ARM_TDINST_FMSTAT, ASMKIT_MNEMONIC_ARM_BASE + 863u, UINT32_C(0xeef1fa10), 4u, ASMKIT_ARM_FIXED_MODE_A32, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000080), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_t2AUT, ASMKIT_MNEMONIC_ARM_BASE + 13u, UINT32_C(0xf3af802d), 4u, ASMKIT_ARM_FIXED_MODE_THUMB, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0008000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_t2PAC, ASMKIT_MNEMONIC_ARM_BASE + 144u, UINT32_C(0xf3af801d), 4u, ASMKIT_ARM_FIXED_MODE_THUMB, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0008000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
     {ASMKIT_ARM_TDINST_t2PACBTI, ASMKIT_MNEMONIC_ARM_BASE + 145u, UINT32_C(0xf3af800d), 4u, ASMKIT_ARM_FIXED_MODE_THUMB, 1u, {UINT64_C(0x0000000000000000), UINT64_C(0x0008000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000), UINT64_C(0x0000000000000000)}},
@@ -122,6 +120,11 @@ static const asmkit_arm_fixed_encode_record_t asmkit_arm_fixed_encode_records[] 
 #define ASMKIT_ARM_BF_TRANSFORM_AM2OFFSET_IMM 63u
 #define ASMKIT_ARM_BF_TRANSFORM_COMPLEX_ROTATE 65u
 #define ASMKIT_ARM_BF_TRANSFORM_COMPLEX_ROTATE_ODD 66u
+#define ASMKIT_ARM_BF_TRANSFORM_REG_FIXED_LITERAL 67u
+#define ASMKIT_ARM_BF_TRANSFORM_POSTIDX_IMM8S4 68u
+#define ASMKIT_ARM_BF_TRANSFORM_MEM_T2_FORCE_NEGIMM8 69u
+#define ASMKIT_ARM_BF_TRANSFORM_VEC_SHIFT_RIGHT 70u
+#define ASMKIT_ARM_BF_TRANSFORM_PC_REL_THUMB_T2_BLX 71u
 
 typedef struct asmkit_arm_bf_operand_desc {
     uint8_t operand_index;
@@ -400,13 +403,13 @@ static int arm_bf_pc_rel_value(const asmkit_inst_t* inst, const asmkit_operand_t
         disp = (int64_t)target - (int64_t)(inst->address + 8u);
         return arm_bf_arm_adr_value(disp, desc->source_mask, out_value);
     case ASMKIT_ARM_BF_TRANSFORM_PC_REL_THUMB_ADR:
-        disp = (int64_t)target - (int64_t)(inst->address + 4u);
+        disp = (int64_t)target - (int64_t)((inst->address + 4u) & ~UINT64_C(3));
         if (disp < 0 || (disp & 3) != 0) {
             return 0;
         }
         return arm_bf_raw_unsigned(disp >> 2, desc->source_mask, out_value);
     case ASMKIT_ARM_BF_TRANSFORM_PC_REL_T2_ADR:
-        disp = (int64_t)target - (int64_t)(inst->address + 4u);
+        disp = (int64_t)target - (int64_t)((inst->address + 4u) & ~UINT64_C(3));
         if (disp < 0) {
             disp = -disp;
             if (disp > 0x0fff) {
@@ -446,6 +449,34 @@ static int arm_bf_pc_rel_value(const asmkit_inst_t* inst, const asmkit_operand_t
         *out_value &= desc->source_mask;
         return 1;
     }
+    case ASMKIT_ARM_BF_TRANSFORM_PC_REL_THUMB_T2_BLX:
+    {
+        uint32_t value;
+        uint32_t i_bit;
+        uint32_t j1_bit;
+        uint32_t j2_bit;
+        disp = (int64_t)target - (int64_t)((inst->address + 4u) & ~UINT64_C(3));
+        if ((desc->source_mask != 0x00ffffffu && desc->source_mask != 0x00fffffeu) || (disp & 1) != 0 || disp < -INT64_C(16777216) || disp > INT64_C(16777214)) {
+            return 0;
+        }
+        value = ((uint32_t)(disp >> 1)) & 0x00ffffffu;
+        i_bit = value & 0x00800000u;
+        j1_bit = value & 0x00400000u;
+        j2_bit = value & 0x00200000u;
+        if ((i_bit != 0u) ^ (j1_bit != 0u)) {
+            value &= ~0x00400000u;
+        } else {
+            value |= 0x00400000u;
+        }
+        if ((i_bit != 0u) ^ (j2_bit != 0u)) {
+            value &= ~0x00200000u;
+        } else {
+            value |= 0x00200000u;
+        }
+        *out_value = value;
+        *out_value &= desc->source_mask;
+        return 1;
+    }
     case ASMKIT_ARM_BF_TRANSFORM_PC_REL_THUMB_T2_BCC:
         disp = (int64_t)target - (int64_t)(inst->address + 4u);
         if (desc->source_mask != 0x001ffffeu || (disp & 1) != 0 || disp < -INT64_C(1048576) || disp > INT64_C(1048574)) {
@@ -454,7 +485,7 @@ static int arm_bf_pc_rel_value(const asmkit_inst_t* inst, const asmkit_operand_t
         *out_value = ((uint32_t)disp) & 0x001ffffeu;
         return 1;
     case ASMKIT_ARM_BF_TRANSFORM_PC_REL_T2_LDR_LABEL:
-        disp = (int64_t)target - (int64_t)(inst->address + 4u);
+        disp = (int64_t)target - (int64_t)((inst->address + 4u) & ~UINT64_C(3));
         if (desc->source_mask != 0x00001fffu || disp < -INT64_C(4095) || disp > INT64_C(4095)) {
             return 0;
         }
@@ -483,6 +514,15 @@ static int arm_bf_imm_value(const asmkit_inst_t* inst, const asmkit_operand_t* o
         }
         *out_value = (uint32_t)(64 - operand->imm);
         return (*out_value & ~desc->source_mask) == 0u && (*out_value & 0x20u) != 0u;
+    case ASMKIT_ARM_BF_TRANSFORM_VEC_SHIFT_RIGHT:
+    {
+        uint32_t lane_width = UINT32_C(1) << arm_bf_bit_width(desc->source_mask);
+        if (desc->source_mask == 0u || lane_width < 8u || lane_width > 64u || operand->imm <= 0 || operand->imm > (int64_t)lane_width) {
+            return 0;
+        }
+        *out_value = lane_width - (uint32_t)operand->imm;
+        return (*out_value & ~desc->source_mask) == 0u;
+    }
     case ASMKIT_ARM_BF_TRANSFORM_IMM_FIXED_LITERAL:
         if (operand->imm != (int64_t)desc->source_mask) {
             return 0;
@@ -499,6 +539,15 @@ static int arm_bf_imm_value(const asmkit_inst_t* inst, const asmkit_operand_t* o
             return 0;
         }
         *out_value = (uint32_t)(operand->imm < 0 ? -operand->imm : operand->imm);
+        if (operand->imm >= 0) {
+            *out_value |= 0x100u;
+        }
+        return (*out_value & ~desc->source_mask) == 0u;
+    case ASMKIT_ARM_BF_TRANSFORM_POSTIDX_IMM8S4:
+        if (operand->imm < -1020 || operand->imm > 1020 || (operand->imm & 3) != 0) {
+            return 0;
+        }
+        *out_value = (uint32_t)(operand->imm < 0 ? -operand->imm : operand->imm) >> 2u;
         if (operand->imm >= 0) {
             *out_value |= 0x100u;
         }
@@ -584,10 +633,9 @@ static int arm_bf_register_info_matches_class(const asmkit_register_info_t* info
     case ASMKIT_ARM_REGCLASS_GPR:
         return info->id >= ASMKIT_ARM_REG_R0 && info->id <= ASMKIT_ARM_REG_PC;
     case ASMKIT_ARM_REGCLASS_SPR:
-        return (info->id >= ASMKIT_ARM_REG_S0 && info->id <= ASMKIT_ARM_REG_S30) ||
-            (info->id >= ASMKIT_ARM_REG_S1 && info->id <= ASMKIT_ARM_REG_S9);
+        return info->width == 32u && info->parent_id >= ASMKIT_ARM_REG_D0 && info->parent_id <= ASMKIT_ARM_REG_D15;
     case ASMKIT_ARM_REGCLASS_DPR:
-        return info->id >= ASMKIT_ARM_REG_D0 && info->id <= ASMKIT_ARM_REG_D31;
+        return info->width == 64u && info->parent_id >= ASMKIT_ARM_REG_Q0 && info->parent_id <= ASMKIT_ARM_REG_Q15;
     case ASMKIT_ARM_REGCLASS_QPR:
         return info->id >= ASMKIT_ARM_REG_Q0 && info->id <= ASMKIT_ARM_REG_Q15;
     case ASMKIT_ARM_REGCLASS_VCCR:
@@ -644,6 +692,41 @@ static int arm_bf_vec_list_value(const asmkit_operand_t* operand, const asmkit_a
 
 static int arm_bf_reg_list_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
 {
+    if (desc->reg_class == ASMKIT_ARM_REGCLASS_DPR || desc->reg_class == ASMKIT_ARM_REGCLASS_SPR) {
+        const asmkit_register_info_t* info;
+        uint32_t count;
+        uint32_t encoded;
+        if (operand->kind != ASMKIT_OP_REG || (operand->flags & ASMKIT_OPERAND_FLAG_VECTOR_LIST) == 0u ||
+            (operand->flags & ASMKIT_OPERAND_FLAG_REGISTER_LIST) != 0u) {
+            return 0;
+        }
+        if (operand->shift_kind != 0u || operand->shift_amount != 0u || operand->shift_reg != 0u ||
+            operand->extend_kind != 0u || operand->extend_amount != 0u ||
+            (operand->flags & ASMKIT_OPERAND_FLAG_AARCH64_EXTENDED_REG) != 0u) {
+            return 0;
+        }
+        if (desc->width != 0u && operand->width != 0u && operand->width != desc->width) {
+            return 0;
+        }
+        count = (uint32_t)operand->imm & 0xffu;
+        if (count == 0u) {
+            count = 1u;
+        }
+        info = asmkit_gen_arm_register_info((uint32_t)operand->reg);
+        if (info == 0 || info->encoding > 31u ||
+            !arm_bf_register_info_matches_class(info, desc->reg_class, desc->width)) {
+            return 0;
+        }
+        if (count > 32u || info->encoding + count > 32u) {
+            return 0;
+        }
+        encoded = ((uint32_t)info->encoding << 8u) | (desc->reg_class == ASMKIT_ARM_REGCLASS_DPR ? count * 2u : count);
+        if ((encoded & ~desc->source_mask) != 0u) {
+            return 0;
+        }
+        *out_value = encoded;
+        return 1;
+    }
     if (operand->kind != ASMKIT_OP_REG || (operand->flags & ASMKIT_OPERAND_FLAG_REGISTER_LIST) == 0u) {
         return 0;
     }
@@ -777,15 +860,16 @@ static int arm_bf_postidx_reg_value(const asmkit_operand_t* operand, uint32_t* o
 
 static int arm_bf_fixed_reg_matches(const asmkit_operand_t* operand, uint64_t expected_reg)
 {
-    uint32_t encoded;
-    uint32_t expected;
-    if (!arm_bf_plain_reg_encoding(operand, ASMKIT_ARM_REGCLASS_GPR, 32u, &encoded)) {
+    if (operand->kind != ASMKIT_OP_REG || operand->reg != expected_reg) {
         return 0;
     }
-    if (!arm_bf_gpr4_encoding(expected_reg, 32u, &expected)) {
+    if (operand->shift_kind != 0u || operand->shift_amount != 0u || operand->shift_reg != 0u ||
+        operand->extend_kind != 0u || operand->extend_amount != 0u ||
+        operand->mem.base != 0u || operand->mem.index != 0u || operand->mem.displacement != 0 ||
+        (operand->flags & (ASMKIT_OPERAND_FLAG_REGISTER_LIST | ASMKIT_OPERAND_FLAG_VECTOR_LIST | ASMKIT_OPERAND_FLAG_AARCH64_EXTENDED_REG)) != 0u) {
         return 0;
     }
-    return encoded == expected;
+    return 1;
 }
 
 static int arm_bf_derived_reg_matches(const asmkit_operand_t* operand, const asmkit_operand_t* base_operand, const asmkit_arm_bf_operand_desc_t* desc)
@@ -1185,7 +1269,7 @@ static int arm_bf_mem_arm_addrmode3_value(const asmkit_operand_t* operand, uint3
         }
         negative = disp < 0;
         abs_disp = (uint32_t)(negative ? -disp : disp);
-        encoded = (abs_disp & 0x0fu) | ((abs_disp & 0xf0u) << 4u) | (negative ? 0u : 0x100u) | (base << 9u) | 0x2000u;
+        encoded = (abs_disp & 0x0fu) | (abs_disp & 0xf0u) | (negative ? 0u : 0x100u) | (base << 9u) | 0x2000u;
     }
     *out_value = encoded;
     return 1;
@@ -1262,7 +1346,7 @@ static int arm_bf_mem_arm_am3offset_value(const asmkit_operand_t* operand, uint3
         }
         negative = disp < 0;
         abs_disp = (uint32_t)(negative ? -disp : disp);
-        encoded = (abs_disp & 0x0fu) | ((abs_disp & 0xf0u) << 4u) | (negative ? 0u : 0x100u) | 0x200u;
+        encoded = (abs_disp & 0x0fu) | (abs_disp & 0xf0u) | (negative ? 0u : 0x100u) | 0x200u;
     }
     *out_value = encoded;
     return 1;
@@ -1300,6 +1384,8 @@ static int arm_bf_mem_value(const asmkit_operand_t* operand, const asmkit_arm_bf
             return arm_bf_mem_base_disp_value(operand, -255, 0, 1u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 1u, out_value);
         }
         return arm_bf_mem_base_disp_value(operand, -255, 255, 1u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 1u, out_value);
+    case ASMKIT_ARM_BF_TRANSFORM_MEM_T2_FORCE_NEGIMM8:
+        return arm_bf_mem_base_disp_value(operand, -255, 0, 1u, 0u, 9u, 0x0fu, 0xffu, 0u, 0u, out_value);
     case ASMKIT_ARM_BF_TRANSFORM_MEM_T2_IMM8S4:
         return arm_bf_mem_base_disp_value(operand, -1020, 1020, 4u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 1u, out_value);
     case ASMKIT_ARM_BF_TRANSFORM_MEM_T2_IMM7S4:
@@ -1476,6 +1562,12 @@ static int arm_bf_operand_alias_matches(const asmkit_inst_t* inst, const asmkit_
                 return 0;
             }
             return arm_bf_fixed_reg_matches(&inst->operands[desc->operand_index], ASMKIT_ARM_REG_LR);
+        }
+        if (desc->transform == ASMKIT_ARM_BF_TRANSFORM_REG_FIXED_LITERAL) {
+            if (desc->operand_index >= inst->operand_count) {
+                return 0;
+            }
+            return arm_bf_fixed_reg_matches(&inst->operands[desc->operand_index], desc->source_mask);
         }
         if (desc->transform == ASMKIT_ARM_BF_TRANSFORM_IMM_FIXED_LITERAL) {
             if (desc->operand_index >= inst->operand_count) {

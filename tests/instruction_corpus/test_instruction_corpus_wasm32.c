@@ -4,12 +4,14 @@
  */
 #include <string.h>
 #include "test_support.h"
+#include "asmkit/asmkit_metadata.h"
 #include "asmkit/target/wasm.h"
 
 #define ASMKIT_INSTRUCTION_CORPUS_TARGET_CASE_COUNT 6u
 #define ASMKIT_INSTRUCTION_CORPUS_TARGET_DETAIL_CASE_COUNT 4u
+#define ASMKIT_INSTRUCTION_CORPUS_TARGET_ARCH ASMKIT_ARCH_WASM
 
-static int asmkit_instruction_corpus_init_engine(asmkit_engine_t* engine, asmkit_arch_t arch, asmkit_mode_t mode)
+static inline int asmkit_instruction_corpus_init_engine(asmkit_engine_t* engine, asmkit_arch_t arch, asmkit_mode_t mode)
 {
     asmkit_engine_config_t config;
     ASMKIT_CHECK(asmkit_engine_config_init(&config, arch, mode) == ASMKIT_OK);
@@ -18,7 +20,7 @@ static int asmkit_instruction_corpus_init_engine(asmkit_engine_t* engine, asmkit
     return 0;
 }
 
-static void asmkit_instruction_corpus_print_bytes(const uint8_t* bytes, uint32_t size)
+static inline void asmkit_instruction_corpus_print_bytes(const uint8_t* bytes, uint32_t size)
 {
     uint32_t index;
     for (index = 0u; index < size; ++index) {
@@ -26,7 +28,8 @@ static void asmkit_instruction_corpus_print_bytes(const uint8_t* bytes, uint32_t
     }
 }
 
-static void asmkit_instruction_corpus_print_operands(const asmkit_inst_t* inst)
+#if ASMKIT_INSTRUCTION_CORPUS_TARGET_DETAIL_CASE_COUNT != 0u
+static inline void asmkit_instruction_corpus_print_operands(const asmkit_inst_t* inst)
 {
     uint32_t index;
     for (index = 0u; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
@@ -62,7 +65,7 @@ static void asmkit_instruction_corpus_print_operands(const asmkit_inst_t* inst)
 #define ASMKIT_CORPUS_CHECK_MEM_SCALE 64u
 #define ASMKIT_CORPUS_CHECK_WIDTH 128u
 
-static uint32_t asmkit_instruction_corpus_arm_reg_bit(uint64_t reg)
+static inline uint32_t asmkit_instruction_corpus_arm_reg_bit(uint64_t reg)
 {
 #ifdef ASMKIT_TARGET_ARM_H
     if (reg >= ASMKIT_ARM_REG_R0 && reg <= ASMKIT_ARM_REG_PC) {
@@ -74,7 +77,7 @@ static uint32_t asmkit_instruction_corpus_arm_reg_bit(uint64_t reg)
     return UINT32_MAX;
 }
 
-static uint32_t asmkit_instruction_corpus_arm_s_reg_number(uint64_t reg)
+static inline uint32_t asmkit_instruction_corpus_arm_s_reg_number(uint64_t reg)
 {
 #ifdef ASMKIT_TARGET_ARM_H
     switch (reg) {
@@ -118,7 +121,7 @@ static uint32_t asmkit_instruction_corpus_arm_s_reg_number(uint64_t reg)
     return UINT32_MAX;
 }
 
-static uint32_t asmkit_instruction_corpus_arm_d_reg_number(uint64_t reg)
+static inline uint32_t asmkit_instruction_corpus_arm_d_reg_number(uint64_t reg)
 {
 #ifdef ASMKIT_TARGET_ARM_H
     if (reg >= ASMKIT_ARM_REG_D0 && reg <= ASMKIT_ARM_REG_D31) {
@@ -130,7 +133,7 @@ static uint32_t asmkit_instruction_corpus_arm_d_reg_number(uint64_t reg)
     return UINT32_MAX;
 }
 
-static int asmkit_instruction_corpus_is_arm_pc(uint64_t reg)
+static inline int asmkit_instruction_corpus_is_arm_pc(uint64_t reg)
 {
 #ifdef ASMKIT_TARGET_ARM_H
     return reg == ASMKIT_ARM_REG_PC;
@@ -140,7 +143,7 @@ static int asmkit_instruction_corpus_is_arm_pc(uint64_t reg)
 #endif
 }
 
-static int asmkit_instruction_corpus_reg_list_contains(const asmkit_operand_t* operand, uint64_t expected_reg)
+static inline int asmkit_instruction_corpus_reg_list_contains(const asmkit_operand_t* operand, uint64_t expected_reg)
 {
     uint32_t bit = asmkit_instruction_corpus_arm_reg_bit(expected_reg);
     uint32_t number;
@@ -171,24 +174,41 @@ static int asmkit_instruction_corpus_reg_list_contains(const asmkit_operand_t* o
     return 0;
 }
 
-static uint8_t asmkit_instruction_corpus_vec_count(const asmkit_operand_t* operand)
+static inline uint8_t asmkit_instruction_corpus_vec_count(const asmkit_operand_t* operand)
 {
     return (uint8_t)((uint32_t)operand->imm & 0xffu);
 }
 
-static uint8_t asmkit_instruction_corpus_vec_stride(const asmkit_operand_t* operand)
+static inline uint8_t asmkit_instruction_corpus_vec_stride(const asmkit_operand_t* operand)
 {
     uint8_t stride = (uint8_t)(((uint32_t)operand->imm >> 8u) & 0xffu);
     return stride == 0u ? 1u : stride;
 }
 
-static int asmkit_instruction_corpus_vec_list_contains(const asmkit_operand_t* operand, uint64_t expected_reg)
+static inline int asmkit_instruction_corpus_vec_list_contains(const asmkit_operand_t* operand, uint64_t expected_reg)
 {
+    const asmkit_register_info_t* base_info;
+    const asmkit_register_info_t* expected_info;
     uint64_t reg;
     uint8_t count;
     uint8_t stride;
     uint8_t index;
-    if ((operand->flags & ASMKIT_OPERAND_FLAG_VECTOR_LIST) == 0u || expected_reg < operand->reg) {
+    if ((operand->flags & ASMKIT_OPERAND_FLAG_VECTOR_LIST) == 0u) {
+        return 0;
+    }
+    if (asmkit_get_register_info(ASMKIT_INSTRUCTION_CORPUS_TARGET_ARCH, (uint32_t)operand->reg, &base_info) == ASMKIT_OK &&
+        asmkit_get_register_info(ASMKIT_INSTRUCTION_CORPUS_TARGET_ARCH, (uint32_t)expected_reg, &expected_info) == ASMKIT_OK &&
+        base_info != 0 && expected_info != 0 && base_info->width == expected_info->width) {
+        count = asmkit_instruction_corpus_vec_count(operand);
+        stride = asmkit_instruction_corpus_vec_stride(operand);
+        for (index = 0u; index < count; ++index) {
+            uint32_t encoding = (uint32_t)base_info->encoding + (uint32_t)index * (uint32_t)stride;
+            if (expected_info->encoding == encoding) {
+                return 1;
+            }
+        }
+    }
+    if (expected_reg < operand->reg) {
         return 0;
     }
     count = asmkit_instruction_corpus_vec_count(operand);
@@ -202,10 +222,13 @@ static int asmkit_instruction_corpus_vec_list_contains(const asmkit_operand_t* o
     return 0;
 }
 
-static int asmkit_instruction_corpus_reg_operand_matches(const asmkit_operand_t* operand, uint64_t expected_reg)
+static inline int asmkit_instruction_corpus_reg_operand_matches(const asmkit_operand_t* operand, uint64_t expected_reg)
 {
     if (operand->kind == ASMKIT_OP_PC_REL && asmkit_instruction_corpus_is_arm_pc(expected_reg)) {
         return 1;
+    }
+    if (operand->kind == ASMKIT_OP_MEM) {
+        return operand->mem.base == expected_reg || operand->mem.index == expected_reg;
     }
     if (operand->kind != ASMKIT_OP_REG) {
         return 0;
@@ -215,7 +238,7 @@ static int asmkit_instruction_corpus_reg_operand_matches(const asmkit_operand_t*
         asmkit_instruction_corpus_vec_list_contains(operand, expected_reg);
 }
 
-static int asmkit_instruction_corpus_find_reg(const asmkit_inst_t* inst, uint32_t start, uint64_t expected_reg, uint32_t* out_index)
+static inline int asmkit_instruction_corpus_find_reg(const asmkit_inst_t* inst, uint32_t start, uint64_t expected_reg, uint32_t* out_index)
 {
     uint32_t index;
     for (index = start; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
@@ -228,7 +251,7 @@ static int asmkit_instruction_corpus_find_reg(const asmkit_inst_t* inst, uint32_
     return 0;
 }
 
-static int asmkit_instruction_corpus_find_imm(const asmkit_inst_t* inst, uint32_t start, int64_t expected_imm, uint32_t* out_index)
+static inline int asmkit_instruction_corpus_find_imm(const asmkit_inst_t* inst, uint32_t start, int64_t expected_imm, uint32_t* out_index)
 {
     uint32_t index;
     for (index = start; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
@@ -241,20 +264,7 @@ static int asmkit_instruction_corpus_find_imm(const asmkit_inst_t* inst, uint32_
     return 0;
 }
 
-static int asmkit_instruction_corpus_find_mem_base(const asmkit_inst_t* inst, uint32_t start, uint64_t expected_reg, uint32_t* out_index)
-{
-    uint32_t index;
-    for (index = start; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
-        const asmkit_operand_t* operand = &inst->operands[index];
-        if (operand->kind == ASMKIT_OP_MEM && operand->mem.base == expected_reg) {
-            *out_index = index;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static int asmkit_instruction_corpus_find_mem_index(const asmkit_inst_t* inst, uint32_t start, uint64_t expected_reg, uint32_t* out_index)
+static inline int asmkit_instruction_corpus_find_mem_index(const asmkit_inst_t* inst, uint32_t start, uint64_t expected_reg, uint32_t* out_index)
 {
     uint32_t index;
     for (index = start; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
@@ -267,7 +277,7 @@ static int asmkit_instruction_corpus_find_mem_index(const asmkit_inst_t* inst, u
     return 0;
 }
 
-static int asmkit_instruction_corpus_find_mem_disp(const asmkit_inst_t* inst, uint32_t start, int64_t expected_disp, uint32_t* out_index)
+static inline int asmkit_instruction_corpus_find_mem_disp(const asmkit_inst_t* inst, uint32_t start, int64_t expected_disp, uint32_t* out_index)
 {
     uint32_t index;
     for (index = start; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
@@ -280,7 +290,7 @@ static int asmkit_instruction_corpus_find_mem_disp(const asmkit_inst_t* inst, ui
     return 0;
 }
 
-static void asmkit_instruction_corpus_advance_cursor(uint32_t* cursor, uint32_t consumed_index)
+static inline void asmkit_instruction_corpus_advance_cursor(uint32_t* cursor, uint32_t consumed_index)
 {
     uint32_t next = consumed_index + 1u;
     if (*cursor < next) {
@@ -288,9 +298,12 @@ static void asmkit_instruction_corpus_advance_cursor(uint32_t* cursor, uint32_t 
     }
 }
 
-static int asmkit_instruction_corpus_operand_scale_matches(const asmkit_operand_t* operand, uint32_t mem_scale)
+static inline int asmkit_instruction_corpus_operand_scale_matches(const asmkit_operand_t* operand, uint32_t mem_scale)
 {
     if (mem_scale == 0u || mem_scale == 1u) {
+        return 1;
+    }
+    if (operand->kind == ASMKIT_OP_MEM && operand->mem.scale == mem_scale) {
         return 1;
     }
     if (operand->kind == ASMKIT_OP_REG && operand->shift_amount < 31u &&
@@ -300,13 +313,13 @@ static int asmkit_instruction_corpus_operand_scale_matches(const asmkit_operand_
     return 0;
 }
 
-static int asmkit_instruction_corpus_operand_matches(
+static inline int asmkit_instruction_corpus_operand_matches(
     const asmkit_inst_t* inst, uint32_t actual_index, uint32_t checks, asmkit_operand_kind_t kind,
     uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, int64_t mem_disp, uint32_t mem_scale, uint32_t width,
     uint32_t* next_cursor)
 {
     const asmkit_operand_t* operand;
-    uint32_t found_index;
+    uint32_t found_index = 0u;
     int split_mem_expected;
     int split_mem_used_current;
     if (actual_index >= inst->operand_count || actual_index >= ASMKIT_MAX_OPERANDS) {
@@ -320,7 +333,9 @@ static int asmkit_instruction_corpus_operand_matches(
         if (operand->kind != kind) {
             if (!split_mem_expected &&
                 !(kind == ASMKIT_OP_IMM && operand->kind == ASMKIT_OP_PC_REL) &&
-                !(kind == ASMKIT_OP_REG && asmkit_instruction_corpus_is_arm_pc(reg) && operand->kind == ASMKIT_OP_PC_REL)) {
+                !(kind == ASMKIT_OP_REG && asmkit_instruction_corpus_is_arm_pc(reg) && operand->kind == ASMKIT_OP_PC_REL) &&
+                !(kind == ASMKIT_OP_REG && operand->kind == ASMKIT_OP_MEM && asmkit_instruction_corpus_reg_operand_matches(operand, reg)) &&
+                !(kind == ASMKIT_OP_IMM && operand->kind == ASMKIT_OP_MEM && operand->mem.displacement == imm)) {
                 return 0;
             }
         }
@@ -328,9 +343,6 @@ static int asmkit_instruction_corpus_operand_matches(
     if ((checks & ASMKIT_CORPUS_CHECK_REG) != 0u) {
         if (operand->kind == ASMKIT_OP_PC_REL && asmkit_instruction_corpus_is_arm_pc(reg)) {
             return 1;
-        }
-        if (operand->kind != ASMKIT_OP_REG) {
-            return 0;
         }
         if (!asmkit_instruction_corpus_reg_operand_matches(operand, reg)) {
             return 0;
@@ -342,6 +354,11 @@ static int asmkit_instruction_corpus_operand_matches(
         }
         if (operand->kind == ASMKIT_OP_WASM_INDEX) {
             if (operand->imm != imm) {
+                return 0;
+            }
+        } else
+        if (operand->kind == ASMKIT_OP_MEM) {
+            if (operand->mem.displacement != imm) {
                 return 0;
             }
         } else
@@ -426,14 +443,15 @@ static int asmkit_instruction_corpus_operand_matches(
     return 1;
 }
 
-static int asmkit_instruction_corpus_composite_operand(const asmkit_operand_t* operand)
+static inline int asmkit_instruction_corpus_composite_operand(const asmkit_operand_t* operand)
 {
     return operand->kind == ASMKIT_OP_PC_REL ||
+        operand->kind == ASMKIT_OP_MEM ||
         (operand->kind == ASMKIT_OP_REG &&
          (operand->flags & (ASMKIT_OPERAND_FLAG_REGISTER_LIST | ASMKIT_OPERAND_FLAG_VECTOR_LIST)) != 0u);
 }
 
-static int asmkit_instruction_corpus_expect_operand(
+static inline int asmkit_instruction_corpus_expect_operand(
     const asmkit_inst_t* inst, uint32_t* cursor, uint32_t checks, asmkit_operand_kind_t kind,
     uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, int64_t mem_disp, uint32_t mem_scale, uint32_t width)
 {
@@ -446,8 +464,20 @@ static int asmkit_instruction_corpus_expect_operand(
             return 1;
         }
     }
+    if ((checks & ASMKIT_CORPUS_CHECK_REG) != 0u && kind == ASMKIT_OP_REG &&
+        *cursor < inst->operand_count && inst->operands[*cursor].kind == ASMKIT_OP_MEM) {
+        for (index = 0u; index < *cursor && index < ASMKIT_MAX_OPERANDS; ++index) {
+            next_cursor = *cursor;
+            if (inst->operands[index].kind != ASMKIT_OP_MEM &&
+                asmkit_instruction_corpus_operand_matches(inst, index, checks, kind, reg, imm, mem_base, mem_index, mem_disp, mem_scale, width, &next_cursor)) {
+                return 1;
+            }
+        }
+    }
     return 0;
 }
+
+#endif
 
 static const uint8_t asmkit_instruction_corpus_wasm32_00000[] = {
     0x0bu,

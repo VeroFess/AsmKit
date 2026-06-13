@@ -41,6 +41,10 @@ typedef struct asmkit_a64_fixed_encode_record {
 #define ASMKIT_A64_BF_TRANSFORM_RAW_SIGNED_SCALED 17u
 #define ASMKIT_A64_BF_TRANSFORM_VEC_SHIFT_RIGHT 18u
 #define ASMKIT_A64_BF_TRANSFORM_VEC_SHIFT_RIGHT_NARROW 19u
+#define ASMKIT_A64_BF_TRANSFORM_RAW_UNSIGNED_OFFSET 20u
+#define ASMKIT_A64_BF_TRANSFORM_COMPLEX_ROTATE 21u
+#define ASMKIT_A64_BF_TRANSFORM_GPR_W12_TO_W15 22u
+#define ASMKIT_A64_BF_TRANSFORM_FIXEDPOINT_SCALE 23u
 
 #define ASMKIT_A64_TD_REGCLASS_NONE 0u
 #define ASMKIT_A64_TD_REGCLASS_GPR 1u
@@ -415,6 +419,13 @@ static int a64_bf_imm_value(const asmkit_operand_t* operand, const asmkit_a64_bf
     if (operand->kind != ASMKIT_OP_IMM) {
         return 0;
     }
+    if (desc->source_mask == 0u && desc->literal_value != 0u) {
+        if (operand->imm != (int64_t)desc->literal_value) {
+            return 0;
+        }
+        *out_value = desc->literal_value;
+        return 1;
+    }
     switch (desc->transform) {
     case ASMKIT_A64_BF_TRANSFORM_RAW_UNSIGNED:
         return a64_bf_raw_unsigned(operand->imm, desc->source_mask, out_value);
@@ -425,6 +436,21 @@ static int a64_bf_imm_value(const asmkit_operand_t* operand, const asmkit_a64_bf
             return 0;
         }
         return a64_bf_raw_unsigned(operand->imm / (int64_t)desc->literal_value, desc->source_mask, out_value);
+    case ASMKIT_A64_BF_TRANSFORM_RAW_UNSIGNED_OFFSET:
+        if (desc->literal_value == 0u || operand->imm < (int64_t)desc->literal_value) {
+            return 0;
+        }
+        return a64_bf_raw_unsigned(operand->imm - (int64_t)desc->literal_value, desc->source_mask, out_value);
+    case ASMKIT_A64_BF_TRANSFORM_FIXEDPOINT_SCALE:
+        if (desc->literal_value == 0u || operand->imm <= 0 || operand->imm > (int64_t)desc->literal_value) {
+            return 0;
+        }
+        *out_value = (uint32_t)((int64_t)desc->literal_value - operand->imm);
+        if ((*out_value & ~desc->source_mask) != (0x3fu & ~desc->source_mask)) {
+            return 0;
+        }
+        *out_value &= desc->source_mask;
+        return 1;
     case ASMKIT_A64_BF_TRANSFORM_RAW_SIGNED_SCALED:
         if (desc->literal_value == 0u || (operand->imm % (int64_t)desc->literal_value) != 0) {
             return 0;
@@ -440,6 +466,11 @@ static int a64_bf_imm_value(const asmkit_operand_t* operand, const asmkit_a64_bf
             return 0;
         }
         return a64_bf_raw_unsigned(((int64_t)desc->literal_value - operand->imm) & (int64_t)((desc->literal_value >> 1u) - 1u), desc->source_mask, out_value);
+    case ASMKIT_A64_BF_TRANSFORM_COMPLEX_ROTATE:
+        if (operand->imm < 0 || operand->imm > 270 || (operand->imm % 90) != 0) {
+            return 0;
+        }
+        return a64_bf_raw_unsigned(operand->imm / 90, desc->source_mask, out_value);
     case ASMKIT_A64_BF_TRANSFORM_ADD_SUB_SHIFTED_IMM:
         return a64_bf_add_sub_shifted_imm(operand->imm, desc->source_mask, out_value);
     case ASMKIT_A64_BF_TRANSFORM_MOV_SHIFT32:
@@ -516,11 +547,11 @@ static int a64_bf_reg_encoding(const asmkit_operand_t* operand, const asmkit_a64
     if (info != 0 && info->encoding <= 31u &&
         (desc->width == 0u || info->width == desc->width || (operand->width != 0u && operand->width == desc->width))) {
         *out_value = (uint32_t)info->encoding;
-        return desc->transform == ASMKIT_A64_BF_TRANSFORM_PNR_P8_TO_P15 || (*out_value & ~desc->source_mask) == 0u;
+        return desc->transform == ASMKIT_A64_BF_TRANSFORM_PNR_P8_TO_P15 || desc->transform == ASMKIT_A64_BF_TRANSFORM_GPR_W12_TO_W15 || (*out_value & ~desc->source_mask) == 0u;
     }
     if (operand->reg <= 30u && (desc->width == 0u || operand->width == 0u || operand->width == desc->width)) {
         *out_value = (uint32_t)operand->reg;
-        return desc->transform == ASMKIT_A64_BF_TRANSFORM_PNR_P8_TO_P15 || (*out_value & ~desc->source_mask) == 0u;
+        return desc->transform == ASMKIT_A64_BF_TRANSFORM_PNR_P8_TO_P15 || desc->transform == ASMKIT_A64_BF_TRANSFORM_GPR_W12_TO_W15 || (*out_value & ~desc->source_mask) == 0u;
     }
     return 0;
 }
@@ -701,6 +732,22 @@ static int a64_bf_reg_value(const asmkit_operand_t* operand, const asmkit_a64_bf
             return 0;
         }
         *out_value = reg - 8u;
+        return (*out_value & ~desc->source_mask) == 0u;
+    }
+    if (desc->transform == ASMKIT_A64_BF_TRANSFORM_GPR_W12_TO_W15) {
+        uint32_t reg;
+        if (operand->shift_kind != 0u || operand->shift_amount != 0u || operand->shift_reg != 0u ||
+            operand->extend_kind != 0u || operand->extend_amount != 0u ||
+            (operand->flags & ASMKIT_OPERAND_FLAG_AARCH64_EXTENDED_REG) != 0u) {
+            return 0;
+        }
+        if (!a64_bf_reg_encoding(operand, desc, &reg)) {
+            return 0;
+        }
+        if (reg < 12u || reg > 15u) {
+            return 0;
+        }
+        *out_value = reg - 12u;
         return (*out_value & ~desc->source_mask) == 0u;
     }
     if (operand->shift_kind != 0u || operand->shift_amount != 0u || operand->shift_reg != 0u ||

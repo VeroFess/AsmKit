@@ -86,6 +86,7 @@ typedef struct asmkit_x86_td_record {
     uint8_t evex_nf;
     uint8_t evex_u;
     uint8_t opcode_plus_reg;
+    uint8_t opcode_low4;
     uint8_t is_nd;
     uint8_t allow_hle_prefix;
     uint64_t feature_bits[ASMKIT_FEATURE_WORD_COUNT];
@@ -105,6 +106,8 @@ typedef struct asmkit_x86_td_record {
     uint8_t opcode_reg_operand;
     uint8_t fixed_accumulator_operand;
     uint8_t fixed_dx_operand;
+    uint8_t fixed_register_operand;
+    uint32_t fixed_register_id;
     uint8_t vvvv_operand;
     uint8_t evex_mask_operand;
     uint8_t round_operand;
@@ -194,6 +197,12 @@ static size_t x86_operand_imm_size(asmkit_mode_t mode, int operand16)
     (void)mode;
     if (operand16) { return 2u; }
     return 4u;
+}
+
+static size_t x86_near_branch_imm_size(asmkit_mode_t mode, int operand16)
+{
+    if (mode == ASMKIT_MODE_X86_64) { return 4u; }
+    return x86_operand_imm_size(mode, operand16);
 }
 
 static int64_t x86_read_signed(const uint8_t* p, size_t n)
@@ -431,7 +440,7 @@ static void x86_decode_16_base_index(uint8_t mod, uint8_t rm, uint32_t* base, ui
 
 static void x86_decode_set_rm_operand(
     const asmkit_engine_t* engine, asmkit_inst_t* inst, const asmkit_x86_td_record_t* record, uint8_t operand_index,
-    uint8_t modrm, int rex_seen, int rex_b, int rex_x, int address16, uint8_t has_sib, uint8_t sib,
+    uint8_t modrm, int rex_seen, int rex_b, int rex_x, int evex_rm_high16, int address16, uint8_t has_sib, uint8_t sib,
     uint8_t no_base, int32_t displacement, uint32_t segment, int pc_relative, uint64_t address, uint32_t len)
 {
     uint8_t mod;
@@ -447,7 +456,7 @@ static void x86_decode_set_rm_operand(
     width = record->operand_widths[operand_index];
     address_width = x86_decode_address_width(engine, address16);
     if (mod == 3u) {
-        x86_decode_set_encoded_operand(inst, operand_index, (uint8_t)(rm | (rex_b ? 8u : 0u)), width, record->operand_reg_classes[operand_index], record->operand_kinds[operand_index], rex_seen);
+        x86_decode_set_encoded_operand(inst, operand_index, (uint8_t)(rm | (uint8_t)rex_b | (uint8_t)evex_rm_high16), width, record->operand_reg_classes[operand_index], record->operand_kinds[operand_index], rex_seen);
         return;
     }
     base = ASMKIT_X86_REG_INVALID;
@@ -461,18 +470,30 @@ static void x86_decode_set_rm_operand(
         scale = (uint8_t)(1u << ((sib >> 6) & 3u));
         index_low = (uint8_t)((sib >> 3) & 7u);
         base_low = (uint8_t)(sib & 7u);
-        if (index_low != 4u) {
-            index = x86_gpr_from_encoding((uint8_t)(index_low | (rex_x ? 8u : 0u)), address_width, 1);
+        if (index_low != 4u || rex_x != 0) {
+            index = x86_gpr_from_encoding((uint8_t)(index_low | (uint8_t)rex_x), address_width, 1);
         }
         if (no_base == 0u) {
-            base = x86_gpr_from_encoding((uint8_t)(base_low | (rex_b ? 8u : 0u)), address_width, 1);
+            base = x86_gpr_from_encoding((uint8_t)(base_low | (uint8_t)rex_b), address_width, 1);
         }
     } else if (pc_relative) {
         base = ASMKIT_X86_REG_RIP;
     } else if (no_base == 0u) {
-        base = x86_gpr_from_encoding((uint8_t)(rm | (rex_b ? 8u : 0u)), address_width, 1);
+        base = x86_gpr_from_encoding((uint8_t)(rm | (uint8_t)rex_b), address_width, 1);
     }
     x86_decode_set_mem_operand(inst, operand_index, base, index, scale, displacement, width, address_width, segment, pc_relative, address, len);
+}
+
+static int32_t x86_evex_scaled_displacement(const asmkit_x86_td_record_t* record, int32_t displacement)
+{
+    uint16_t width;
+    int32_t scale;
+    if (record == 0 || record->rm_operand >= record->operand_count || record->rm_operand >= ASMKIT_MAX_OPERANDS) { return displacement; }
+    if (record->operand_kinds[record->rm_operand] != ASMKIT_OP_MEM) { return displacement; }
+    width = record->operand_widths[record->rm_operand];
+    if (width < 8u) { return displacement; }
+    scale = (int32_t)(width / 8u);
+    return displacement * scale;
 }
 
 static uint16_t x86_decode_io_accumulator_width(uint8_t opcode, int operand16)
@@ -503,9 +524,12 @@ static void x86_decode_populate_io_operands(asmkit_inst_t* inst, uint8_t opcode,
     inst->operands[1].operand_index = 1u;
 }
 
+static asmkit_mnemonic_id_t x86_setcc_mnemonic_id(uint8_t condition);
+static asmkit_mnemonic_id_t x86_cmovcc_mnemonic_id(uint8_t condition);
+
 static void x86_populate_td_operands(
     const asmkit_engine_t* engine, asmkit_inst_t* inst, const asmkit_x86_td_record_t* record, uint8_t opcode, uint8_t modrm,
-    int rex_seen, int rex_r, int rex_b, int rex_x, int address16, uint8_t has_sib, uint8_t sib, uint8_t no_base,
+    int rex_seen, int rex_r, int rex_b, int rex_x, int evex_rm_high16, int address16, uint8_t has_sib, uint8_t sib, uint8_t no_base,
     int32_t displacement, uint32_t segment, int pc_relative, uint8_t vector_vvvv, uint8_t evex_aaa, uint8_t evex_round_control, const uint8_t* imm_ptr, size_t imm_size, uint64_t address, uint32_t len)
 {
     uint8_t i;
@@ -538,32 +562,32 @@ static void x86_populate_td_operands(
         }
     } else if (record->decode_form == ASMKIT_X86_ENC_ADD_REG) {
         uint8_t enc;
-        enc = (uint8_t)((opcode & 7u) | (rex_b ? 8u : 0u));
+        enc = (uint8_t)((opcode & 7u) | (uint8_t)rex_b);
         if (record->opcode_reg_operand < record->operand_count) {
             uint16_t width = record->operand_widths[record->opcode_reg_operand];
             x86_decode_set_encoded_operand(inst, record->opcode_reg_operand, enc, width, record->operand_reg_classes[record->opcode_reg_operand], record->operand_kinds[record->opcode_reg_operand], rex_seen);
         }
     } else if (record->decode_form == ASMKIT_X86_ENC_MODRM_RM_REG) {
         if (record->rm_operand < record->operand_count) {
-            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
+            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, evex_rm_high16, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
         }
         if (record->reg_operand < record->operand_count) {
-            uint8_t reg = (uint8_t)(((modrm >> 3) & 7u) | (rex_r ? 8u : 0u));
+            uint8_t reg = (uint8_t)(((modrm >> 3) & 7u) | (uint8_t)rex_r);
             uint16_t width = record->operand_widths[record->reg_operand];
             x86_decode_set_encoded_operand(inst, record->reg_operand, reg, width, record->operand_reg_classes[record->reg_operand], record->operand_kinds[record->reg_operand], rex_seen);
         }
     } else if (record->decode_form == ASMKIT_X86_ENC_MODRM_REG_RM) {
         if (record->reg_operand < record->operand_count) {
-            uint8_t reg = (uint8_t)(((modrm >> 3) & 7u) | (rex_r ? 8u : 0u));
+            uint8_t reg = (uint8_t)(((modrm >> 3) & 7u) | (uint8_t)rex_r);
             uint16_t width = record->operand_widths[record->reg_operand];
             x86_decode_set_encoded_operand(inst, record->reg_operand, reg, width, record->operand_reg_classes[record->reg_operand], record->operand_kinds[record->reg_operand], rex_seen);
         }
         if (record->rm_operand < record->operand_count) {
-            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
+            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, evex_rm_high16, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
         }
     } else if (record->decode_form == ASMKIT_X86_ENC_MODRM_FIXED_RM) {
         if (record->rm_operand < record->operand_count) {
-            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
+            x86_decode_set_rm_operand(engine, inst, record, record->rm_operand, modrm, rex_seen, rex_b, rex_x, evex_rm_high16, address16, has_sib, sib, no_base, displacement, segment, pc_relative, address, len);
         }
     }
     if (record->fixed_accumulator_operand < record->operand_count) {
@@ -572,6 +596,11 @@ static void x86_populate_td_operands(
     }
     if (record->fixed_dx_operand < record->operand_count) {
         x86_decode_set_reg_operand(inst, record->fixed_dx_operand, ASMKIT_X86_REG_DX, 16u);
+    }
+    if (record->fixed_register_operand < record->operand_count) {
+        uint16_t width = record->operand_widths[record->fixed_register_operand];
+        if (width == 0u && record->operand_reg_classes[record->fixed_register_operand] == ASMKIT_X86_REGCLASS_SEGMENT) { width = 16u; }
+        x86_decode_set_reg_operand(inst, record->fixed_register_operand, record->fixed_register_id, width);
     }
     if (record->vvvv_operand < record->operand_count) {
         uint16_t width = record->operand_widths[record->vvvv_operand];
@@ -597,6 +626,12 @@ static void x86_populate_td_operands(
     }
     if (record->evex_nf != 0u) {
         inst->attributes |= ASMKIT_INSTRUCTION_ATTR_X86_NF;
+    }
+    if (record->opcode_map == 1u && opcode >= 0x40u && opcode <= 0x4fu) {
+        inst->mnemonic_id = x86_cmovcc_mnemonic_id(opcode);
+    }
+    if (record->opcode_map == 1u && opcode >= 0x90u && opcode <= 0x9fu) {
+        inst->mnemonic_id = x86_setcc_mnemonic_id(opcode);
     }
     if (record->imm_reg_operand < record->operand_count && imm_size != 0u) {
         uint8_t enc;
@@ -672,6 +707,13 @@ static int x86_is_repeatable_string_opcode(uint8_t opcode)
     }
 }
 
+static int x86_accepts_redundant_rep_prefix(uint8_t opcode_map, uint8_t opcode)
+{
+    if (opcode_map == 0u && x86_is_repeatable_string_opcode(opcode)) { return 1; }
+    if (opcode_map == 0u && (opcode == 0xc2u || opcode == 0xc3u || opcode == 0xcau || opcode == 0xcbu)) { return 1; }
+    return 0;
+}
+
 static int x86_td_prefix_matches(const asmkit_x86_td_record_t* record, int prefix_66, int prefix_f2, int prefix_f3, const asmkit_x86_prefix_state_t* prefix)
 {
     if (record->vector_type != ASMKIT_X86_TD_ENC_NORMAL) {
@@ -681,13 +723,15 @@ static int x86_td_prefix_matches(const asmkit_x86_td_record_t* record, int prefi
     if (record->mandatory_prefix == 0x66u) { return prefix_66 != 0; }
     if (record->mandatory_prefix == 0xf2u) { return prefix_f2 != 0; }
     if (record->mandatory_prefix == 0xf3u) { return prefix_f3 != 0; }
-    if ((prefix_f2 != 0 || prefix_f3 != 0) && x86_is_repeatable_string_opcode(record->opcode)) { return 1; }
+    if ((prefix_f2 != 0 || prefix_f3 != 0) && x86_accepts_redundant_rep_prefix(record->opcode_map, record->opcode)) { return 1; }
+    if ((prefix_f2 != 0 || prefix_f3 != 0) && record->opcode_map == 0u && record->opcode >= 0xd8u && record->opcode <= 0xdfu) { return 1; }
     return record->allow_hle_prefix != 0u || (prefix_f2 == 0 && prefix_f3 == 0);
 }
 
 static int x86_td_opcode_matches(const asmkit_x86_td_record_t* record, uint8_t opcode)
 {
     if (record->opcode_plus_reg != 0u) { return (uint8_t)(opcode & 0xf8u) == record->opcode; }
+    if (record->opcode_low4 != 0u) { return (uint8_t)(opcode & 0xf0u) == record->opcode; }
     return opcode == record->opcode;
 }
 
@@ -695,7 +739,7 @@ static int x86_td_vector_matches(const asmkit_x86_td_record_t* record, const asm
 {
     if (record->vector_type == ASMKIT_X86_TD_ENC_NORMAL) {
         if (record->rex_w != 0u && (mode != ASMKIT_MODE_X86_64 || rex_w == 0)) { return 0; }
-        if (record->rex_w == 0u && rex_w != 0 && record->op_size != ASMKIT_X86_TD_OPSIZE_FIXED) { return 0; }
+        if (record->ignores_w == 0u && record->rex_w == 0u && rex_w != 0 && record->op_size != ASMKIT_X86_TD_OPSIZE_FIXED) { return 0; }
         return 1;
     }
     if (prefix->vector_type != record->vector_type) { return 0; }
@@ -839,6 +883,13 @@ static asmkit_mnemonic_id_t x86_jcc_mnemonic_id(uint8_t condition)
     }
 }
 
+static asmkit_mnemonic_id_t x86_loop_mnemonic_id(uint8_t opcode)
+{
+    if (opcode == 0xe0u) { return ASMKIT_GEN_X86_MNEMONIC_LOOPNE_ID; }
+    if (opcode == 0xe1u) { return ASMKIT_GEN_X86_MNEMONIC_LOOPE_ID; }
+    return ASMKIT_GEN_X86_MNEMONIC_LOOP_ID;
+}
+
 static asmkit_mnemonic_id_t x86_setcc_mnemonic_id(uint8_t condition)
 {
     switch (condition & 0x0fu) {
@@ -885,6 +936,73 @@ static asmkit_mnemonic_id_t x86_cmovcc_mnemonic_id(uint8_t condition)
     }
 }
 
+static asmkit_mnemonic_id_t x86_sse_cmp_mnemonic_id(uint32_t id, uint8_t predicate)
+{
+    uint8_t suffix;
+    suffix = 0u;
+    switch (id) {
+    case ASMKIT_X86_TDINST_CMPPSrmi:
+    case ASMKIT_X86_TDINST_CMPPSrri: suffix = 1u; break;
+    case ASMKIT_X86_TDINST_CMPPDrmi:
+    case ASMKIT_X86_TDINST_CMPPDrri: suffix = 2u; break;
+    case ASMKIT_X86_TDINST_CMPSSrmi_Int:
+    case ASMKIT_X86_TDINST_CMPSSrri_Int: suffix = 3u; break;
+    case ASMKIT_X86_TDINST_CMPSDrmi_Int:
+    case ASMKIT_X86_TDINST_CMPSDrri_Int: suffix = 4u; break;
+    default: return ASMKIT_MNEMONIC_INVALID;
+    }
+    switch (predicate & 0x07u) {
+    case 0u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPEQPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPEQPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPEQSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPEQSD_ID;
+    case 1u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLTPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLTPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLTSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPLTSD_ID;
+    case 2u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLEPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLEPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPLESS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPLESD_ID;
+    case 3u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPUNORDPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPUNORDPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPUNORDSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPUNORDSD_ID;
+    case 4u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNEQPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNEQPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNEQSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPNEQSD_ID;
+    case 5u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLTPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLTPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLTSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPNLTSD_ID;
+    case 6u:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLEPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLEPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPNLESS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPNLESD_ID;
+    default:
+        if (suffix == 1u) { return ASMKIT_GEN_X86_MNEMONIC_CMPORDPS_ID; }
+        if (suffix == 2u) { return ASMKIT_GEN_X86_MNEMONIC_CMPORDPD_ID; }
+        if (suffix == 3u) { return ASMKIT_GEN_X86_MNEMONIC_CMPORDSS_ID; }
+        return ASMKIT_GEN_X86_MNEMONIC_CMPORDSD_ID;
+    }
+}
+
+static void x86_apply_sse_cmp_alias(asmkit_inst_t* inst, const asmkit_x86_td_record_t* record)
+{
+    asmkit_mnemonic_id_t alias_id;
+    if (inst->operand_count == 0u || inst->operands[inst->operand_count - 1u].kind != ASMKIT_OP_IMM) { return; }
+    alias_id = x86_sse_cmp_mnemonic_id(record->id, (uint8_t)inst->operands[inst->operand_count - 1u].imm);
+    if (alias_id != ASMKIT_MNEMONIC_INVALID) { inst->mnemonic_id = alias_id; }
+}
+
 static uint32_t x86_inst_prefix_flags(const asmkit_engine_t* engine, const uint8_t* code, uint32_t size)
 {
     uint32_t flags;
@@ -914,7 +1032,7 @@ static uint32_t x86_inst_prefix_flags(const asmkit_engine_t* engine, const uint8
         }
         break;
     }
-    if (i < size && x86_is_repeatable_string_opcode(code[i])) {
+    if (i < size && x86_accepts_redundant_rep_prefix(0u, code[i])) {
         if (prefix_f2 != 0) { flags |= ASMKIT_INST_FLAG_X86_REPNE; }
         else if (prefix_f3 != 0) { flags |= ASMKIT_INST_FLAG_X86_REP; }
     }
@@ -966,6 +1084,7 @@ static void x86_add_pc_operand(asmkit_inst_t* inst, const uint8_t* imm_ptr, size
     inst->operands[0].imm = x86_read_signed(imm_ptr, imm_size);
     inst->operands[0].abs_target = address + (uint64_t)len + (uint64_t)inst->operands[0].imm;
     inst->operands[0].width = (uint8_t)(imm_size * 8u);
+    inst->operands[0].flags = ASMKIT_OPERAND_FLAG_EXPLICIT | ASMKIT_OPERAND_FLAG_READ | ASMKIT_OPERAND_FLAG_RELATIVE | ASMKIT_OPERAND_FLAG_SIGNED;
 }
 
 asmkit_status_t asmkit_gen_x86_decode_one(
@@ -977,7 +1096,6 @@ asmkit_status_t asmkit_gen_x86_decode_one(
 {
     const asmkit_x86_td_record_t* td_record;
     size_t i;
-    size_t op_index;
     size_t len;
     size_t imm_size;
     int operand16;
@@ -987,6 +1105,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     int rex_r;
     int rex_x;
     int rex_b;
+    int evex_rm_high16;
     int prefix_66;
     int prefix_f2;
     int prefix_f3;
@@ -1025,6 +1144,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     rex_r = 0;
     rex_x = 0;
     rex_b = 0;
+    evex_rm_high16 = 0;
     prefix_66 = 0;
     prefix_f2 = 0;
     prefix_f3 = 0;
@@ -1046,18 +1166,18 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         } else if (engine->config.mode == ASMKIT_MODE_X86_64 && code[i] >= 0x40u && code[i] <= 0x4fu) {
             rex_seen = 1;
             rex_w = (code[i] & 0x08u) != 0u;
-            rex_r = (code[i] & 0x04u) != 0u;
-            rex_x = (code[i] & 0x02u) != 0u;
-            rex_b = (code[i] & 0x01u) != 0u;
+            rex_r = (code[i] & 0x04u) != 0u ? 8 : 0;
+            rex_x = (code[i] & 0x02u) != 0u ? 8 : 0;
+            rex_b = (code[i] & 0x01u) != 0u ? 8 : 0;
             ++i;
         } else if (engine->config.mode == ASMKIT_MODE_X86_64 && code[i] == 0xd5u && i + 1u < code_size) {
             uint8_t rex2;
             rex2 = code[i + 1u];
             rex_seen = 1;
             rex_w = (rex2 & 0x08u) != 0u;
-            rex_r = (rex2 & 0x04u) != 0u;
-            rex_x = (rex2 & 0x02u) != 0u;
-            rex_b = (rex2 & 0x01u) != 0u;
+            rex_r = (rex2 & 0x04u) != 0u ? 8 : 0;
+            rex_x = (rex2 & 0x02u) != 0u ? 8 : 0;
+            rex_b = (rex2 & 0x01u) != 0u ? 8 : 0;
             i += 2u;
         } else {
             break;
@@ -1065,7 +1185,6 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     }
     if (i >= code_size || i >= ASMKIT_X86_MAX_INSTRUCTION_BYTES) { return ASMKIT_ERR_DECODE_FAILED; }
 
-    op_index = i;
     opcode_map = 0u;
     op = code[i];
     opcode = op;
@@ -1093,9 +1212,10 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         prefix.evex_u = (uint8_t)(((uint8_t)(~prefix_byte2) >> 2) & 1u);
         rex_seen = 1;
         rex_w = prefix.vector_w;
-        rex_r = (prefix_byte1 & 0x80u) == 0u;
-        rex_x = (prefix_byte1 & 0x40u) == 0u;
-        rex_b = (prefix_byte1 & 0x20u) == 0u;
+        rex_r = ((prefix_byte1 & 0x80u) == 0u ? 8 : 0) | ((prefix_byte1 & 0x10u) == 0u ? 16 : 0);
+        rex_x = (prefix_byte1 & 0x40u) == 0u ? 8 : 0;
+        rex_b = (prefix_byte1 & 0x20u) == 0u ? 8 : 0;
+        evex_rm_high16 = (prefix_byte1 & 0x40u) == 0u ? 16 : 0;
         i += 4u;
         opcode = code[i++];
     } else if (op == 0xc4u && i + 3u < code_size && (engine->config.mode == ASMKIT_MODE_X86_64 || (code[i + 1u] & 0xc0u) == 0xc0u)) {
@@ -1111,9 +1231,9 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         prefix.vector_vvvv = (uint8_t)(((uint8_t)(~prefix_byte2) >> 3) & 0x0fu);
         rex_seen = 1;
         rex_w = prefix.vector_w;
-        rex_r = (prefix_byte1 & 0x80u) == 0u;
-        rex_x = (prefix_byte1 & 0x40u) == 0u;
-        rex_b = (prefix_byte1 & 0x20u) == 0u;
+        rex_r = (prefix_byte1 & 0x80u) == 0u ? 8 : 0;
+        rex_x = (prefix_byte1 & 0x40u) == 0u ? 8 : 0;
+        rex_b = (prefix_byte1 & 0x20u) == 0u ? 8 : 0;
         i += 3u;
         opcode = code[i++];
     } else if (op == 0xc5u && i + 2u < code_size && (engine->config.mode == ASMKIT_MODE_X86_64 || (code[i + 1u] & 0xc0u) == 0xc0u)) {
@@ -1124,7 +1244,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         prefix.vector_pp = (uint8_t)(prefix_byte1 & 3u);
         prefix.vector_vvvv = (uint8_t)(((uint8_t)(~prefix_byte1) >> 3) & 0x0fu);
         rex_seen = 1;
-        rex_r = (prefix_byte1 & 0x80u) == 0u;
+        rex_r = (prefix_byte1 & 0x80u) == 0u ? 8 : 0;
         i += 2u;
         opcode = code[i++];
     } else if (op == 0x8fu && i + 3u < code_size && (code[i + 1u] & 0x38u) != 0u) {
@@ -1140,9 +1260,9 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         prefix.vector_vvvv = (uint8_t)(((uint8_t)(~prefix_byte2) >> 3) & 0x0fu);
         rex_seen = 1;
         rex_w = prefix.vector_w;
-        rex_r = (prefix_byte1 & 0x80u) == 0u;
-        rex_x = (prefix_byte1 & 0x40u) == 0u;
-        rex_b = (prefix_byte1 & 0x20u) == 0u;
+        rex_r = (prefix_byte1 & 0x80u) == 0u ? 8 : 0;
+        rex_x = (prefix_byte1 & 0x40u) == 0u ? 8 : 0;
+        rex_b = (prefix_byte1 & 0x20u) == 0u ? 8 : 0;
         i += 3u;
         opcode = code[i++];
     } else {
@@ -1166,15 +1286,8 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && opcode == 0x90u && !prefix_f2 && !prefix_f3) {
         return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)i, ASMKIT_X86_NOP, ASMKIT_INST_NOP, 0u);
     }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && (opcode == 0xc3u || opcode == 0xcbu)) {
-        return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)i, ASMKIT_X86_RET, ASMKIT_INST_RETURN, ASMKIT_INST_FLAG_RETURN | ASMKIT_INST_FLAG_TERMINATOR);
-    }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && (opcode == 0xc2u || opcode == 0xcau)) {
-        if (code_size < i + 2u) { return ASMKIT_ERR_DECODE_FAILED; }
-        return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)(i + 2u), ASMKIT_X86_RET, ASMKIT_INST_RETURN, ASMKIT_INST_FLAG_RETURN | ASMKIT_INST_FLAG_TERMINATOR);
-    }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && (opcode == 0xe8u || opcode == 0xe9u || opcode == 0xebu || (opcode >= 0x70u && opcode <= 0x7fu) || (opcode >= 0xe0u && opcode <= 0xe3u))) {
-        imm_size = (opcode == 0xebu || (opcode >= 0x70u && opcode <= 0x7fu) || (opcode >= 0xe0u && opcode <= 0xe3u)) ? 1u : x86_operand_imm_size(engine->config.mode, operand16);
+    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && (opcode == 0xe8u || opcode == 0xe9u || opcode == 0xebu || (opcode >= 0x70u && opcode <= 0x7fu) || (opcode >= 0xe0u && opcode <= 0xe2u))) {
+        imm_size = (opcode == 0xebu || (opcode >= 0x70u && opcode <= 0x7fu) || (opcode >= 0xe0u && opcode <= 0xe2u)) ? 1u : x86_near_branch_imm_size(engine->config.mode, operand16);
         if (code_size < i + imm_size) { return ASMKIT_ERR_DECODE_FAILED; }
         len = i + imm_size;
         if (opcode == 0xe8u) {
@@ -1182,8 +1295,9 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         } else if (opcode >= 0x70u && opcode <= 0x7fu) {
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
             out_inst->mnemonic_id = x86_jcc_mnemonic_id(opcode);
-        } else if (opcode >= 0xe0u && opcode <= 0xe3u) {
+        } else if (opcode >= 0xe0u && opcode <= 0xe2u) {
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_LOOP_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
+            out_inst->mnemonic_id = x86_loop_mnemonic_id(opcode);
         } else {
             (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JMP_REL, ASMKIT_INST_DIRECT_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_TERMINATOR);
         }
@@ -1191,7 +1305,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         return ASMKIT_OK;
     }
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0x80u && opcode <= 0x8fu) {
-        imm_size = x86_operand_imm_size(engine->config.mode, operand16);
+        imm_size = x86_near_branch_imm_size(engine->config.mode, operand16);
         if (code_size < i + imm_size) { return ASMKIT_ERR_DECODE_FAILED; }
         len = i + imm_size;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
@@ -1199,18 +1313,6 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         x86_add_pc_operand(out_inst, code + i, imm_size, address, (uint32_t)len);
         return ASMKIT_OK;
     }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0xc8u && opcode <= 0xcfu) {
-        uint16_t width;
-        uint8_t enc;
-        width = prefix_66 ? 16u : ((engine->config.mode == ASMKIT_MODE_X86_64 && rex_w) ? 64u : 32u);
-        enc = (uint8_t)((opcode & 7u) | (rex_b ? 8u : 0u));
-        (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)i, ASMKIT_X86_OTHER, ASMKIT_INST_ALU, 0u);
-        out_inst->mnemonic_id = ASMKIT_GEN_X86_MNEMONIC_BSWAP_ID;
-        out_inst->operand_count = 1u;
-        x86_decode_set_reg_operand(out_inst, 0u, x86_gpr_from_encoding(enc, width, 1), width);
-        return ASMKIT_OK;
-    }
-
     address_width = x86_decode_address_width(engine, address16);
     td_record = x86_find_td_record(engine, opcode_map, opcode, engine->config.mode, operand16, rex_w, prefix_66, prefix_f2, prefix_f3, address_width, &prefix, 0, 0u, 1);
     if (td_record == 0 && x86_find_td_record(engine, opcode_map, opcode, engine->config.mode, operand16, rex_w, prefix_66, prefix_f2, prefix_f3, address_width, &prefix, 0, 0u, 0) != 0) {
@@ -1220,7 +1322,8 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         len = i + td_record->imm_size + td_record->extra_imm_size;
         if (code_size < len || len > ASMKIT_X86_MAX_INSTRUCTION_BYTES) { return ASMKIT_ERR_DECODE_FAILED; }
         (void)x86_finish_td(engine, code, code_size, address, out_inst, (uint32_t)len, td_record);
-        x86_populate_td_operands(engine, out_inst, td_record, opcode, 0u, rex_seen, rex_r, rex_b, rex_x, address16, 0u, 0u, 0u, 0, segment_reg, 0, prefix.vector_vvvv, prefix.evex_aaa, (uint8_t)(prefix.vector_l | (prefix.vector_l2 << 1)), code + i, td_record->imm_size, address, (uint32_t)len);
+        x86_populate_td_operands(engine, out_inst, td_record, opcode, 0u, rex_seen, rex_r, rex_b, rex_x, evex_rm_high16, address16, 0u, 0u, 0u, 0, segment_reg, 0, prefix.vector_vvvv, prefix.evex_aaa, (uint8_t)(prefix.vector_l | (prefix.vector_l2 << 1)), code + i, td_record->imm_size, address, (uint32_t)len);
+        x86_apply_sse_cmp_alias(out_inst, td_record);
         if (td_record->imm_pc_rel != 0u) {
             out_inst->flags |= ASMKIT_INST_FLAG_PC_RELATIVE;
             if (out_inst->operand_count == 0u) { x86_add_pc_operand(out_inst, code + i, td_record->imm_size, address, (uint32_t)len); }
@@ -1229,7 +1332,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     }
 
     if (td_record == 0 && prefix.vector_type != ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0x80u && opcode <= 0x8fu) {
-        imm_size = x86_operand_imm_size(engine->config.mode, operand16);
+        imm_size = x86_near_branch_imm_size(engine->config.mode, operand16);
         if (code_size < i + imm_size) { return ASMKIT_ERR_DECODE_FAILED; }
         len = i + imm_size;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JCC_REL, ASMKIT_INST_COND_BRANCH, ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
@@ -1319,25 +1422,22 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     if (code_size < i + imm_size || i + imm_size > ASMKIT_X86_MAX_INSTRUCTION_BYTES) { return ASMKIT_ERR_DECODE_FAILED; }
     len = i + imm_size;
     if (disp_size != 0u) { displacement = x86_read_displacement(code + disp_offset, disp_size); }
+    if (td_record != 0 && prefix.vector_type == ASMKIT_X86_TD_ENC_EVEX && disp_size == 1u && mod != 3u) {
+        displacement = x86_evex_scaled_displacement(td_record, displacement);
+    }
 
-    if (opcode_map == 0u && opcode == 0xffu && reg == 2u) {
-        return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_CALL_INDIRECT, ASMKIT_INST_INDIRECT_CALL, ASMKIT_INST_FLAG_CALL | ASMKIT_INST_FLAG_UNSUPPORTED_RELOC);
-    }
-    if (opcode_map == 0u && opcode == 0xffu && reg == 4u) {
-        return x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_JMP_INDIRECT, ASMKIT_INST_INDIRECT_BRANCH, ASMKIT_INST_FLAG_TERMINATOR | ASMKIT_INST_FLAG_UNSUPPORTED_RELOC);
-    }
-    if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && opcode == 0x63u && engine->config.mode == ASMKIT_MODE_X86_64 && rex_w == 0) {
+    if (td_record == 0 && prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 0u && opcode == 0x63u && engine->config.mode == ASMKIT_MODE_X86_64 && rex_w == 0) {
         uint32_t dst_reg;
         uint16_t dst_width;
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_OTHER, ASMKIT_INST_ALU, 0u);
         out_inst->mnemonic_id = ASMKIT_GEN_X86_MNEMONIC_MOVSXD_ID;
         out_inst->operand_count = 2u;
         dst_width = prefix_66 ? 16u : 32u;
-        dst_reg = x86_gpr_from_encoding((uint8_t)(reg | (rex_r ? 8u : 0u)), dst_width, 1);
+        dst_reg = x86_gpr_from_encoding((uint8_t)(reg | (uint8_t)rex_r), dst_width, 1);
         out_inst->operands[0] = asmkit_operand_reg(dst_reg, dst_width);
         out_inst->operands[0].operand_index = 0u;
         if (mod == 3u) {
-            uint32_t src_reg = x86_gpr_from_encoding((uint8_t)(rm | (rex_b ? 8u : 0u)), 32u, 1);
+            uint32_t src_reg = x86_gpr_from_encoding((uint8_t)(rm | (uint8_t)rex_b), 32u, 1);
             out_inst->operands[1] = asmkit_operand_reg(src_reg, 32u);
             out_inst->operands[1].operand_index = 1u;
         } else {
@@ -1350,12 +1450,12 @@ asmkit_status_t asmkit_gen_x86_decode_one(
                 uint8_t index_low = (uint8_t)((sib >> 3) & 7u);
                 uint8_t base_low = (uint8_t)(sib & 7u);
                 scale = (uint8_t)(1u << ((sib >> 6) & 3u));
-                if (index_low != 4u) { index = x86_gpr_from_encoding((uint8_t)(index_low | (rex_x ? 8u : 0u)), address_width, 1); }
-                if (no_base == 0u) { base = x86_gpr_from_encoding((uint8_t)(base_low | (rex_b ? 8u : 0u)), address_width, 1); }
+                if (index_low != 4u || rex_x != 0) { index = x86_gpr_from_encoding((uint8_t)(index_low | (uint8_t)rex_x), address_width, 1); }
+                if (no_base == 0u) { base = x86_gpr_from_encoding((uint8_t)(base_low | (uint8_t)rex_b), address_width, 1); }
             } else if (pc_relative) {
                 base = ASMKIT_X86_REG_RIP;
             } else if (no_base == 0u) {
-                base = x86_gpr_from_encoding((uint8_t)(rm | (rex_b ? 8u : 0u)), address_width, 1);
+                base = x86_gpr_from_encoding((uint8_t)(rm | (uint8_t)rex_b), address_width, 1);
             }
             x86_decode_set_mem_operand(out_inst, 1u, base, index, scale, displacement, 32u, address_width, segment_reg, pc_relative, address, (uint32_t)len);
         }
@@ -1363,7 +1463,9 @@ asmkit_status_t asmkit_gen_x86_decode_one(
     }
     if (td_record != 0) {
         (void)x86_finish_td(engine, code, code_size, address, out_inst, (uint32_t)len, td_record);
-        x86_populate_td_operands(engine, out_inst, td_record, opcode, modrm, rex_seen, rex_r, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, prefix.vector_vvvv, prefix.evex_aaa, (uint8_t)(prefix.vector_l | (prefix.vector_l2 << 1)), code + (len - imm_size), td_record->imm_size, address, (uint32_t)len);
+        x86_populate_td_operands(engine, out_inst, td_record, opcode, modrm, rex_seen, rex_r, rex_b, rex_x, evex_rm_high16, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, prefix.vector_vvvv, prefix.evex_aaa, (uint8_t)(prefix.vector_l | (prefix.vector_l2 << 1)), code + (len - imm_size), td_record->imm_size, address, (uint32_t)len);
+        x86_apply_sse_cmp_alias(out_inst, td_record);
+        if (opcode_map == 0u && opcode == 0xffu && (reg == 2u || reg == 4u)) { out_inst->flags |= ASMKIT_INST_FLAG_UNSUPPORTED_RELOC; }
         if (pc_relative) {
             out_inst->flags |= ASMKIT_INST_FLAG_PC_RELATIVE;
             if (out_inst->operand_count == 0u) { x86_add_pc_operand(out_inst, code + disp_offset, 4u, address, (uint32_t)len); }
@@ -1385,8 +1487,8 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_OTHER, ASMKIT_INST_ALU, ASMKIT_INST_FLAG_CONDITIONAL);
         out_inst->mnemonic_id = x86_cmovcc_mnemonic_id(opcode);
         out_inst->operand_count = 2u;
-        x86_decode_set_reg_operand(out_inst, 0u, x86_gpr_from_encoding((uint8_t)(reg | (rex_r ? 8u : 0u)), width, rex_seen), width);
-        x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 1u, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
+        x86_decode_set_reg_operand(out_inst, 0u, x86_gpr_from_encoding((uint8_t)(reg | (uint8_t)rex_r), width, rex_seen), width);
+        x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 1u, modrm, rex_seen, rex_b, rex_x, 0, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
         return ASMKIT_OK;
     }
     if (prefix.vector_type == ASMKIT_X86_TD_ENC_NORMAL && opcode_map == 1u && opcode >= 0x90u && opcode <= 0x9fu) {
@@ -1399,7 +1501,7 @@ asmkit_status_t asmkit_gen_x86_decode_one(
         (void)x86_finish(engine, code, code_size, address, out_inst, (uint32_t)len, ASMKIT_X86_OTHER, ASMKIT_INST_STORE, 0u);
         out_inst->mnemonic_id = x86_setcc_mnemonic_id(opcode);
         out_inst->operand_count = 1u;
-        x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 0u, modrm, rex_seen, rex_b, rex_x, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
+        x86_decode_set_rm_operand(engine, out_inst, &fallback_record, 0u, modrm, rex_seen, rex_b, rex_x, 0, address16, has_sib, sib, no_base, displacement, segment_reg, pc_relative, address, (uint32_t)len);
         return ASMKIT_OK;
     }
 

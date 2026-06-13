@@ -35,6 +35,14 @@ function(asmkit_copy_asan_runtime target)
   endif()
 endfunction()
 
+function(asmkit_enable_strict_warnings target)
+  if(MSVC)
+    target_compile_options(${target} PRIVATE /W4 /WX)
+  else()
+    target_compile_options(${target} PRIVATE -Wall -Wextra -Werror -pedantic)
+  endif()
+endfunction()
+
 set(ASMKIT_CORE_SOURCES
   src/core/asmkit_bounds.c
   src/core/asmkit_easy.c
@@ -103,11 +111,7 @@ if(ASMKIT_FREESTANDING)
 endif()
 set_target_properties(asmkit PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
 
-if(MSVC)
-  target_compile_options(asmkit PRIVATE /W4 /WX)
-else()
-  target_compile_options(asmkit PRIVATE -Wall -Wextra -Werror -pedantic)
-endif()
+asmkit_enable_strict_warnings(asmkit)
 
 if(ASMKIT_ENABLE_TESTS)
   enable_testing()
@@ -136,6 +140,7 @@ if(ASMKIT_ENABLE_TESTS)
   target_link_libraries(asmkit_core_tests PRIVATE asmkit)
   target_include_directories(asmkit_core_tests PRIVATE include tests)
   set_target_properties(asmkit_core_tests PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
+  asmkit_enable_strict_warnings(asmkit_core_tests)
   if(MSVC)
     target_compile_options(asmkit_core_tests PRIVATE /bigobj)
   endif()

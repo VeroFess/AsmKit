@@ -2,7 +2,26 @@
 
 ASMKIT is a C99 toolkit for multi-platform disassembly and structured assembly.
 
-> Status: Pre-1.0. The public C ABI can change before `1.0.0`.
+## Status
+
+ASMKIT is pre-1.0. The public C ABI can change before `1.0.0`.
+
+The current real-world all-export validation suite passes with zero critical
+mismatches and no unresolved `detail_warning` entries in the checked reports.
+It cross-checks ASMKIT disassembly against LLVM MC and Capstone over exported
+functions from `ntoskrnl.exe` and Debian ELF shared libraries: `libaom`,
+`libatomic`, `libavcodec`, `libcrypto`, `libdav1d`, `libdnnl`, `libffi`,
+`libgcc_s`, `libgmp`, `libjpeg`, `liblz4`, `liblzma`, `libpcre2-8`,
+`libpixman-1`, `libssl`, `libstdc++`, `libunwind`, `libvpx`, `libx265`,
+`libzstd`, and OpenBLAS images (`libblas`, `liblapack`, `libopenblas`).
+
+| Real-world test | Images | Exported functions | Instructions | Critical mismatches |
+|---|---:|---:|---:|---:|
+| x86 / i386 exports | 46 | 52,405 | 3,662,582 | 0 |
+| x86-64 / amd64 exports | 48 | 61,514 | 4,289,528 | 0 |
+| ARM / armhf exports | 49 | 38,033 | 2,090,927 | 0 |
+| AArch64 / arm64 exports | 48 | 51,522 | 3,288,230 | 0 |
+| Total | 191 | 203,474 | 13,331,267 | 0 |
 
 Language: [简体中文](README.zh-cn.md)
 

@@ -100,6 +100,11 @@
 #define ASMKIT_ARM_TD_TRANSFORM_AM2OFFSET_IMM 63u
 #define ASMKIT_ARM_TD_TRANSFORM_COMPLEX_ROTATE 65u
 #define ASMKIT_ARM_TD_TRANSFORM_COMPLEX_ROTATE_ODD 66u
+#define ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LITERAL 67u
+#define ASMKIT_ARM_TD_TRANSFORM_POSTIDX_IMM8S4 68u
+#define ASMKIT_ARM_TD_TRANSFORM_MEM_T2_FORCE_NEGIMM8 69u
+#define ASMKIT_ARM_TD_TRANSFORM_VEC_SHIFT_RIGHT 70u
+#define ASMKIT_ARM_TD_TRANSFORM_PC_REL_THUMB_T2_BLX 71u
 
 typedef struct asmkit_arm_td_operand_desc {
     uint8_t operand_index;
@@ -124,6 +129,7 @@ typedef struct asmkit_arm_td_record {
     uint32_t value;
     uint8_t size;
     uint8_t fixed_bits;
+    uint8_t priority;
     uint8_t decode_space;
     uint32_t operand_desc_index;
     uint32_t piece_index;
@@ -145,7 +151,7 @@ static int64_t arm_sign_extend(uint32_t value, unsigned bits)
 {
     uint32_t sign;
     sign = (uint32_t)1u << (bits - 1u);
-    return (int64_t)((value ^ sign) - sign);
+    return (int64_t)(value ^ sign) - (int64_t)sign;
 }
 
 static asmkit_mnemonic_id_t arm_mnemonic_id(uint32_t id)
@@ -224,10 +230,9 @@ static int arm_td_register_info_matches_class(const asmkit_register_info_t* info
     case ASMKIT_ARM_REGCLASS_GPR:
         return info->id >= ASMKIT_ARM_REG_R0 && info->id <= ASMKIT_ARM_REG_PC;
     case ASMKIT_ARM_REGCLASS_SPR:
-        return (info->id >= ASMKIT_ARM_REG_S0 && info->id <= ASMKIT_ARM_REG_S30) ||
-            (info->id >= ASMKIT_ARM_REG_S1 && info->id <= ASMKIT_ARM_REG_S9);
+        return info->width == 32u && info->parent_id >= ASMKIT_ARM_REG_D0 && info->parent_id <= ASMKIT_ARM_REG_D15;
     case ASMKIT_ARM_REGCLASS_DPR:
-        return info->id >= ASMKIT_ARM_REG_D0 && info->id <= ASMKIT_ARM_REG_D31;
+        return info->width == 64u && info->parent_id >= ASMKIT_ARM_REG_Q0 && info->parent_id <= ASMKIT_ARM_REG_Q15;
     case ASMKIT_ARM_REGCLASS_QPR:
         return info->id >= ASMKIT_ARM_REG_Q0 && info->id <= ASMKIT_ARM_REG_Q15;
     case ASMKIT_ARM_REGCLASS_VCCR:
@@ -285,6 +290,28 @@ static asmkit_operand_t arm_td_tgpr_operand(uint32_t value, const asmkit_arm_td_
 static asmkit_operand_t arm_td_reg_list_operand(uint32_t value, const asmkit_arm_td_operand_desc_t* desc)
 {
     asmkit_operand_t operand;
+    if (desc->reg_class == ASMKIT_ARM_REGCLASS_DPR || desc->reg_class == ASMKIT_ARM_REGCLASS_SPR) {
+        uint32_t start = (value >> 8u) & 0x1fu;
+        uint32_t count = value & 0xffu;
+        uint32_t reg;
+        if (desc->reg_class == ASMKIT_ARM_REGCLASS_DPR) {
+            if ((count & 1u) != 0u) {
+                return asmkit_operand_none();
+            }
+            count >>= 1u;
+        }
+        if (count == 0u || count > 32u || start + count > 32u) {
+            return asmkit_operand_none();
+        }
+        reg = arm_td_reg_id(start, desc->width, desc->reg_class);
+        if (reg == ASMKIT_ARM_REG_INVALID) {
+            return asmkit_operand_none();
+        }
+        operand = asmkit_operand_reg(reg, desc->width);
+        operand.flags |= ASMKIT_OPERAND_FLAG_VECTOR_LIST;
+        operand.imm = (int64_t)(count | (1u << 8));
+        return operand;
+    }
     operand = asmkit_operand_reg((uint64_t)(value & desc->source_mask), desc->width);
     operand.flags |= ASMKIT_OPERAND_FLAG_REGISTER_LIST;
     return operand;
@@ -560,7 +587,7 @@ static asmkit_operand_t arm_td_mem_arm_addrmode3_operand(uint32_t value, uint16_
     }
     positive = value & 0x100u;
     if ((value & 0x2000u) != 0u) {
-        int64_t disp = (int64_t)((value & 0x0fu) | ((value >> 4u) & 0xf0u));
+        int64_t disp = (int64_t)((value & 0x0fu) | (value & 0xf0u));
         asmkit_operand_t operand;
         if (positive == 0u) {
             disp = -disp;
@@ -649,7 +676,7 @@ static asmkit_operand_t arm_td_mem_arm_am3offset_operand(uint32_t value, uint16_
     uint32_t positive = value & 0x100u;
     asmkit_operand_t operand;
     if ((value & 0x200u) != 0u) {
-        int64_t disp = (int64_t)((value & 0x0fu) | ((value >> 4u) & 0xf0u));
+        int64_t disp = (int64_t)((value & 0x0fu) | (value & 0xf0u));
         if (positive == 0u) {
             disp = -disp;
         }
@@ -711,6 +738,8 @@ static asmkit_operand_t arm_td_mem_operand(uint32_t value, const asmkit_arm_td_o
             return arm_td_mem_base_disp_operand(value, desc->width, 1u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 0u);
         }
         return arm_td_mem_base_disp_operand(value, desc->width, 1u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 1u);
+    case ASMKIT_ARM_TD_TRANSFORM_MEM_T2_FORCE_NEGIMM8:
+        return arm_td_mem_base_disp_operand(value | 0x100u, desc->width, 1u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 0u);
     case ASMKIT_ARM_TD_TRANSFORM_MEM_T2_IMM8S4:
         return arm_td_mem_base_disp_operand(value, desc->width, 4u, 0u, 9u, 0x0fu, 0xffu, 0x100u, 1u);
     case ASMKIT_ARM_TD_TRANSFORM_MEM_T2_IMM7S4:
@@ -869,6 +898,13 @@ static int64_t arm_td_imm_value(uint32_t value, const asmkit_arm_td_operand_desc
     if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_NEON_VCVT_IMM32) {
         return (int64_t)(64u - value);
     }
+    if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_VEC_SHIFT_RIGHT) {
+        uint32_t lane_width = UINT32_C(1) << arm_td_bit_width(desc->source_mask);
+        if (desc->source_mask == 0u || lane_width < 8u || lane_width > 64u || value > lane_width) {
+            return 0;
+        }
+        return (int64_t)(lane_width - value);
+    }
     if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_IMM_FIXED_LITERAL) {
         return (int64_t)desc->source_mask;
     }
@@ -877,6 +913,10 @@ static int64_t arm_td_imm_value(uint32_t value, const asmkit_arm_td_operand_desc
     }
     if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_POSTIDX_IMM8) {
         int64_t disp = (int64_t)(value & 0xffu);
+        return (value & 0x100u) != 0u ? disp : -disp;
+    }
+    if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_POSTIDX_IMM8S4) {
+        int64_t disp = (int64_t)(value & 0xffu) * 4;
         return (value & 0x100u) != 0u ? disp : -disp;
     }
     if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_IMM_SCALE4) {
@@ -901,8 +941,10 @@ static int64_t arm_td_imm_value(uint32_t value, const asmkit_arm_td_operand_desc
 static asmkit_operand_t arm_td_pc_rel_operand(uint64_t address, uint32_t value, const asmkit_arm_td_operand_desc_t* desc)
 {
     asmkit_operand_t operand;
+    uint64_t base;
     uint32_t width;
     int64_t disp;
+    base = address;
     width = arm_td_bit_width(desc->source_mask);
     if (width == 0u) {
         return asmkit_operand_none();
@@ -938,17 +980,19 @@ static asmkit_operand_t arm_td_pc_rel_operand(uint64_t address, uint32_t value, 
         break;
     }
     case ASMKIT_ARM_TD_TRANSFORM_PC_REL_THUMB_ADR:
-        disp = ((int64_t)(value & 0xffu) << 2) + 4;
+        base = (address + 4u) & ~UINT64_C(3);
+        disp = (int64_t)(value & 0xffu) << 2;
         break;
     case ASMKIT_ARM_TD_TRANSFORM_PC_REL_T2_ADR:
+        base = (address + 4u) & ~UINT64_C(3);
         if ((value & 0x1000u) != 0u) {
             value &= 0x0fffu;
             if (value == 0u) {
                 return asmkit_operand_none();
             }
-            disp = 4 - (int64_t)value;
+            disp = -(int64_t)value;
         } else {
-            disp = (int64_t)(value & 0x0fffu) + 4;
+            disp = (int64_t)(value & 0x0fffu);
         }
         break;
     case ASMKIT_ARM_TD_TRANSFORM_PC_REL_THUMB_T2_B:
@@ -966,6 +1010,22 @@ static asmkit_operand_t arm_td_pc_rel_operand(uint64_t address, uint32_t value, 
         disp = (arm_sign_extend(value, 24u) << 1) + 4;
         break;
     }
+    case ASMKIT_ARM_TD_TRANSFORM_PC_REL_THUMB_T2_BLX:
+    {
+        uint32_t i_bit;
+        uint32_t j1_bit;
+        uint32_t j2_bit;
+        if (desc->source_mask != 0x00ffffffu && desc->source_mask != 0x00fffffeu) {
+            return asmkit_operand_none();
+        }
+        base = (address + 4u) & ~UINT64_C(3);
+        i_bit = value & 0x00800000u;
+        j1_bit = ((i_bit != 0u) ^ ((value & 0x00400000u) == 0u)) ? 0x00400000u : 0u;
+        j2_bit = ((i_bit != 0u) ^ ((value & 0x00200000u) == 0u)) ? 0x00200000u : 0u;
+        value = (value & ~0x00600000u) | j1_bit | j2_bit;
+        disp = arm_sign_extend(value, 24u) << 1;
+        break;
+    }
     case ASMKIT_ARM_TD_TRANSFORM_PC_REL_THUMB_T2_BCC:
         if (desc->source_mask != 0x001ffffeu) {
             return asmkit_operand_none();
@@ -976,22 +1036,50 @@ static asmkit_operand_t arm_td_pc_rel_operand(uint64_t address, uint32_t value, 
         if (desc->source_mask != 0x00001fffu) {
             return asmkit_operand_none();
         }
+        base = (address + 4u) & ~UINT64_C(3);
         if ((value & 0x1000u) != 0u) {
-            disp = (int64_t)(value & 0x0fffu) + 4;
+            disp = (int64_t)(value & 0x0fffu);
         } else {
             value &= 0x0fffu;
             if (value == 0u) {
                 return asmkit_operand_none();
             }
-            disp = 4 - (int64_t)value;
+            disp = -(int64_t)value;
         }
         break;
     default:
         return asmkit_operand_none();
     }
     operand = asmkit_operand_pc_rel(disp, desc->width != 0u ? desc->width : (uint16_t)width);
-    operand.abs_target = address + (uint64_t)disp;
+    operand.abs_target = base + (uint64_t)disp;
     return operand;
+}
+
+static int arm_td_decoded_operands_valid(const asmkit_arm_td_record_t* record, const asmkit_inst_t* inst)
+{
+    uint8_t i;
+    switch (record->id) {
+    case ASMKIT_ARM_TDINST_MVE_VPTv16i8r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv16s8r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv16u8r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv4f32r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv4i32r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv4s32r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv4u32r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv8f16r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv8i16r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv8s16r:
+    case ASMKIT_ARM_TDINST_MVE_VPTv8u16r:
+        for (i = 0u; i < inst->operand_count; ++i) {
+            if (inst->operands[i].kind == ASMKIT_OP_REG && inst->operands[i].width == 32u && inst->operands[i].reg == ASMKIT_ARM_REG_PC) {
+                return 0;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    return 1;
 }
 
 static int arm_decode_td_operands(const asmkit_arm_td_record_t* record, uint32_t word, uint64_t address, asmkit_inst_t* out_inst)
@@ -1033,7 +1121,8 @@ static int arm_decode_td_operands(const asmkit_arm_td_record_t* record, uint32_t
         if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_MEM_BASE_ALIAS ||
             desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_DERIVED ||
             desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_SP ||
-            desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LR) {
+            desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LR ||
+            desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LITERAL) {
             continue;
         }
         value = values[desc->operand_index];
@@ -1131,6 +1220,8 @@ static int arm_decode_td_operands(const asmkit_arm_td_record_t* record, uint32_t
             operand = arm_td_fixed_reg_operand(ASMKIT_ARM_REG_SP, desc);
         } else if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LR) {
             operand = arm_td_fixed_reg_operand(ASMKIT_ARM_REG_LR, desc);
+        } else if (desc->transform == ASMKIT_ARM_TD_TRANSFORM_REG_FIXED_LITERAL) {
+            operand = arm_td_fixed_reg_operand(desc->source_mask, desc);
         } else {
             continue;
         }
@@ -1138,7 +1229,7 @@ static int arm_decode_td_operands(const asmkit_arm_td_record_t* record, uint32_t
         out_inst->operands[desc->operand_index] = operand;
     }
     out_inst->operand_count = record->operand_count;
-    return 1;
+    return arm_td_decoded_operands_valid(record, out_inst);
 }
 
 static int arm_td_features_match(const asmkit_engine_t* engine, const asmkit_arm_td_record_t* record)
@@ -1174,7 +1265,9 @@ static int arm_td_space_matches(uint8_t record_space, uint8_t requested_space)
 static const asmkit_arm_td_record_t* arm_find_a32_td_record_in_space(const asmkit_engine_t* engine, uint32_t word, uint8_t decode_space, int check_features)
 {
     const asmkit_arm_td_record_t* best_record = 0;
+    uint8_t best_priority = 0u;
     uint8_t best_fixed_bits = 0u;
+    uint8_t best_blocked_priority = 0u;
     uint8_t best_blocked_fixed_bits = 0u;
     int have_best = 0;
     int have_blocked = 0;
@@ -1189,20 +1282,22 @@ static const asmkit_arm_td_record_t* arm_find_a32_td_record_in_space(const asmki
                 continue;
             }
             if (check_features && !arm_td_features_match(engine, record)) {
-                if (!have_blocked || record->fixed_bits > best_blocked_fixed_bits) {
+                if (!have_blocked || record->priority > best_blocked_priority || (record->priority == best_blocked_priority && record->fixed_bits > best_blocked_fixed_bits)) {
+                    best_blocked_priority = record->priority;
                     best_blocked_fixed_bits = record->fixed_bits;
                     have_blocked = 1;
                 }
                 continue;
             }
-            if (!have_best || record->fixed_bits > best_fixed_bits) {
+            if (!have_best || record->priority > best_priority || (record->priority == best_priority && record->fixed_bits > best_fixed_bits)) {
                 best_record = record;
+                best_priority = record->priority;
                 best_fixed_bits = record->fixed_bits;
                 have_best = 1;
             }
         }
     }
-    if (check_features && have_blocked && (!have_best || best_blocked_fixed_bits > best_fixed_bits)) {
+    if (check_features && have_blocked && (!have_best || best_blocked_priority > best_priority || (best_blocked_priority == best_priority && best_blocked_fixed_bits > best_fixed_bits))) {
         return 0;
     }
     return best_record;
@@ -1216,7 +1311,9 @@ static const asmkit_arm_td_record_t* arm_find_a32_td_record(const asmkit_engine_
 static const asmkit_arm_td_record_t* arm_find_thumb_td_record_in_space(const asmkit_engine_t* engine, uint32_t word, uint8_t size, uint8_t decode_space, int check_features)
 {
     const asmkit_arm_td_record_t* best_record = 0;
+    uint8_t best_priority = 0u;
     uint8_t best_fixed_bits = 0u;
+    uint8_t best_blocked_priority = 0u;
     uint8_t best_blocked_fixed_bits = 0u;
     int have_best = 0;
     int have_blocked = 0;
@@ -1231,20 +1328,22 @@ static const asmkit_arm_td_record_t* arm_find_thumb_td_record_in_space(const asm
                 continue;
             }
             if (check_features && !arm_td_features_match(engine, record)) {
-                if (!have_blocked || record->fixed_bits > best_blocked_fixed_bits) {
+                if (!have_blocked || record->priority > best_blocked_priority || (record->priority == best_blocked_priority && record->fixed_bits > best_blocked_fixed_bits)) {
+                    best_blocked_priority = record->priority;
                     best_blocked_fixed_bits = record->fixed_bits;
                     have_blocked = 1;
                 }
                 continue;
             }
-            if (!have_best || record->fixed_bits > best_fixed_bits) {
+            if (!have_best || record->priority > best_priority || (record->priority == best_priority && record->fixed_bits > best_fixed_bits)) {
                 best_record = record;
+                best_priority = record->priority;
                 best_fixed_bits = record->fixed_bits;
                 have_best = 1;
             }
         }
     }
-    if (check_features && have_blocked && (!have_best || best_blocked_fixed_bits > best_fixed_bits)) {
+    if (check_features && have_blocked && (!have_best || best_blocked_priority > best_priority || (best_blocked_priority == best_priority && best_blocked_fixed_bits > best_fixed_bits))) {
         return 0;
     }
     return best_record;
@@ -1274,6 +1373,9 @@ static asmkit_status_t arm_finish(
     out_inst->address = address;
     out_inst->size = size;
     out_inst->flags = flags;
+    if (engine->config.mode == ASMKIT_MODE_ARM_A32 && size == 4u && (asmkit_load32le(code) >> 28u) < 0x0eu) {
+        out_inst->flags |= ASMKIT_INST_FLAG_CONDITIONAL;
+    }
     asmkit_copy(out_inst->bytes, code, size > ASMKIT_MAX_INST_BYTES ? ASMKIT_MAX_INST_BYTES : size);
     return ASMKIT_OK;
 }
@@ -1295,29 +1397,55 @@ static asmkit_status_t arm_finish_td(
     out_inst->address = address;
     out_inst->size = record->size;
     out_inst->flags = record->flags;
+    if (engine->config.mode == ASMKIT_MODE_ARM_A32 && record->size == 4u && (word >> 28u) < 0x0eu) {
+        out_inst->flags |= ASMKIT_INST_FLAG_CONDITIONAL;
+    }
     asmkit_copy(out_inst->bytes, code, record->size > ASMKIT_MAX_INST_BYTES ? ASMKIT_MAX_INST_BYTES : record->size);
-    return arm_decode_td_operands(record, word, address, out_inst) ? ASMKIT_OK : ASMKIT_ERR_DECODE_FAILED;
+    if (!arm_decode_td_operands(record, word, address, out_inst)) {
+        return ASMKIT_ERR_DECODE_FAILED;
+    }
+    if (record->id == ASMKIT_ARM_TDINST_t2IT && out_inst->operand_count >= 1u && out_inst->operands[0].kind == ASMKIT_OP_IMM && out_inst->operands[0].imm == 15) {
+        out_inst->operands[0].imm = 14;
+    }
+    return ASMKIT_OK;
 }
 
 static void arm_add_pc_operand(asmkit_inst_t* inst, int64_t disp, uint64_t target, uint8_t width)
 {
-    inst->operand_count = 1u;
-    inst->operands[0].kind = ASMKIT_OP_PC_REL;
-    inst->operands[0].imm = disp;
-    inst->operands[0].abs_target = target;
-    inst->operands[0].width = width;
+    uint8_t index;
+    if (inst->operand_count >= ASMKIT_MAX_OPERANDS) {
+        return;
+    }
+    index = inst->operand_count++;
+    inst->operands[index].kind = ASMKIT_OP_PC_REL;
+    inst->operands[index].imm = disp;
+    inst->operands[index].abs_target = target;
+    inst->operands[index].width = width;
+    inst->operands[index].operand_index = index;
+    inst->operands[index].flags = ASMKIT_OPERAND_FLAG_EXPLICIT | ASMKIT_OPERAND_FLAG_READ | ASMKIT_OPERAND_FLAG_RELATIVE | ASMKIT_OPERAND_FLAG_SIGNED;
 }
 
-static int arm_add_gpr_operand(asmkit_inst_t* inst, uint32_t encoded_reg)
+static int arm_append_gpr_operand(asmkit_inst_t* inst, uint32_t encoded_reg, uint32_t flags)
 {
+    uint8_t index;
     uint32_t reg = arm_td_reg_id(encoded_reg & 0x0fu, 32u, ASMKIT_ARM_REGCLASS_GPR);
     if (reg == ASMKIT_ARM_REG_INVALID) {
         return 0;
     }
-    inst->operand_count = 1u;
-    inst->operands[0] = asmkit_operand_reg(reg, 32u);
-    inst->operands[0].operand_index = 0u;
+    if (inst->operand_count >= ASMKIT_MAX_OPERANDS) {
+        return 0;
+    }
+    index = inst->operand_count++;
+    inst->operands[index] = asmkit_operand_reg(reg, 32u);
+    inst->operands[index].operand_index = index;
+    inst->operands[index].flags |= ASMKIT_OPERAND_FLAG_EXPLICIT | flags;
     return 1;
+}
+
+static int arm_add_gpr_operand(asmkit_inst_t* inst, uint32_t encoded_reg)
+{
+    inst->operand_count = 0u;
+    return arm_append_gpr_operand(inst, encoded_reg, ASMKIT_OPERAND_FLAG_READ);
 }
 
 static asmkit_status_t arm_decode_thumb_shared_a32_space(
@@ -1353,7 +1481,7 @@ static asmkit_status_t arm_decode_a32(const asmkit_engine_t* engine, const uint8
         return ASMKIT_ERR_DECODE_FAILED;
     }
     w = asmkit_load32le(code);
-    if ((w & 0x0e000000u) == 0x0a000000u) {
+    if ((w >> 28u) != 0x0fu && (w & 0x0e000000u) == 0x0a000000u) {
         disp = arm_sign_extend(w & 0x00ffffffu, 24u) << 2;
         disp += 8;
         (void)arm_finish(engine, code, address, out_inst, 4u,
@@ -1374,9 +1502,16 @@ static asmkit_status_t arm_decode_a32(const asmkit_engine_t* engine, const uint8
         return arm_add_gpr_operand(out_inst, w & 0x0fu) ? ASMKIT_OK : ASMKIT_ERR_DECODE_FAILED;
     }
     if ((w & 0x0f7f0000u) == 0x051f0000u) {
-        disp = (int64_t)(w & 0x00000fffu) + 8;
+        disp = (int64_t)(w & 0x00000fffu);
+        if ((w & 0x00800000u) == 0u) {
+            disp = -disp;
+        }
+        disp += 8;
         (void)arm_finish(engine, code, address, out_inst, 4u, ASMKIT_ARM_LDR_LITERAL, ASMKIT_INST_LOAD,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_LITERAL);
+        if (!arm_append_gpr_operand(out_inst, (w >> 12u) & 0x0fu, ASMKIT_OPERAND_FLAG_WRITE)) {
+            return ASMKIT_ERR_DECODE_FAILED;
+        }
         arm_add_pc_operand(out_inst, disp, address + (uint64_t)disp, 12u);
         return ASMKIT_OK;
     }
@@ -1407,7 +1542,13 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
     }
     h1 = asmkit_load16le(code);
     if ((h1 & 0xff00u) == 0xbf00u && (h1 & 0x000fu) != 0u) {
-        return arm_finish(engine, code, address, out_inst, 2u, ASMKIT_THUMB_IT, ASMKIT_INST_ARM_IT, 0u);
+        (void)arm_finish(engine, code, address, out_inst, 2u, ASMKIT_THUMB_IT, ASMKIT_INST_ARM_IT, 0u);
+        out_inst->operand_count = 2u;
+        out_inst->operands[0] = asmkit_operand_imm((int64_t)((((h1 >> 4u) & 0x0fu) == 0x0fu) ? 0x0eu : ((h1 >> 4u) & 0x0fu)), 4u);
+        out_inst->operands[0].operand_index = 0u;
+        out_inst->operands[1] = asmkit_operand_imm((int64_t)(h1 & 0x0fu), 4u);
+        out_inst->operands[1].operand_index = 1u;
+        return ASMKIT_OK;
     }
     if ((h1 & 0xf800u) == 0xe000u) {
         disp = arm_sign_extend(h1 & 0x07ffu, 11u) << 1;
@@ -1426,12 +1567,12 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
         arm_add_pc_operand(out_inst, disp, address + (uint64_t)disp, 8u);
         return ASMKIT_OK;
     }
-    if ((h1 & 0xff87u) == 0x4700u) {
+    if ((h1 & 0xff80u) == 0x4700u) {
         (void)arm_finish(engine, code, address, out_inst, 2u, ASMKIT_THUMB_BX, ASMKIT_INST_INDIRECT_BRANCH,
             ASMKIT_INST_FLAG_TERMINATOR | ASMKIT_INST_FLAG_STATE_SWITCH);
         return arm_add_gpr_operand(out_inst, (uint32_t)((h1 >> 3u) & 0x0fu)) ? ASMKIT_OK : ASMKIT_ERR_DECODE_FAILED;
     }
-    if ((h1 & 0xff87u) == 0x4780u) {
+    if ((h1 & 0xff80u) == 0x4780u) {
         (void)arm_finish(engine, code, address, out_inst, 2u, ASMKIT_THUMB_BLX, ASMKIT_INST_INDIRECT_CALL,
             ASMKIT_INST_FLAG_CALL | ASMKIT_INST_FLAG_STATE_SWITCH);
         return arm_add_gpr_operand(out_inst, (uint32_t)((h1 >> 3u) & 0x0fu)) ? ASMKIT_OK : ASMKIT_ERR_DECODE_FAILED;
@@ -1442,8 +1583,23 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
         }
         h2 = asmkit_load16le(code + 2);
         if ((h1 & 0xf800u) == 0xf000u && (h2 & 0xd000u) == 0xd000u) {
-            return arm_finish(engine, code, address, out_inst, 4u, ASMKIT_THUMB_BL, ASMKIT_INST_DIRECT_CALL,
+            uint32_t s_bit;
+            uint32_t j1_bit;
+            uint32_t j2_bit;
+            uint32_t i1_bit;
+            uint32_t i2_bit;
+            uint32_t imm_value;
+            s_bit = (uint32_t)((h1 >> 10u) & 1u);
+            j1_bit = (uint32_t)((h2 >> 13u) & 1u);
+            j2_bit = (uint32_t)((h2 >> 11u) & 1u);
+            i1_bit = (uint32_t)(1u ^ (j1_bit ^ s_bit));
+            i2_bit = (uint32_t)(1u ^ (j2_bit ^ s_bit));
+            imm_value = (s_bit << 24u) | (i1_bit << 23u) | (i2_bit << 22u) | ((uint32_t)(h1 & 0x03ffu) << 12u) | ((uint32_t)(h2 & 0x07ffu) << 1u);
+            disp = arm_sign_extend(imm_value, 25u) + 4;
+            (void)arm_finish(engine, code, address, out_inst, 4u, ASMKIT_THUMB_BL, ASMKIT_INST_DIRECT_CALL,
                 ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CALL);
+            arm_add_pc_operand(out_inst, disp, address + (uint64_t)disp, 24u);
+            return ASMKIT_OK;
         }
         w = ((uint32_t)h1 << 16) | (uint32_t)h2;
         td_record = arm_find_thumb_td_record(engine, w, 4u, 1);
@@ -1492,18 +1648,18 @@ static asmkit_status_t arm_decode_thumb(const asmkit_engine_t* engine, const uin
                 return shared_status;
             }
         }
-        td_record = arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_CDE, 1);
-        if (td_record != 0) {
-            return arm_finish_td(engine, code, address, out_inst, w, td_record);
-        }
-        if (arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_CDE, 0) != 0) {
-            return ASMKIT_ERR_UNSUPPORTED_FEATURE;
-        }
         td_record = arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_COPROC, 1);
         if (td_record != 0) {
             return arm_finish_td(engine, code, address, out_inst, w, td_record);
         }
         if (arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_COPROC, 0) != 0) {
+            return ASMKIT_ERR_UNSUPPORTED_FEATURE;
+        }
+        td_record = arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_CDE, 1);
+        if (td_record != 0) {
+            return arm_finish_td(engine, code, address, out_inst, w, td_record);
+        }
+        if (arm_find_thumb_td_record_in_space(engine, w, 4u, ASMKIT_ARM_TD_SPACE_THUMB2_CDE, 0) != 0) {
             return ASMKIT_ERR_UNSUPPORTED_FEATURE;
         }
         return arm_finish(engine, code, address, out_inst, 4u, ASMKIT_ARM_OTHER, ASMKIT_INST_OTHER, 0u);

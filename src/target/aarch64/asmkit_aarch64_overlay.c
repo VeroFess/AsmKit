@@ -190,12 +190,12 @@ static int a64_word_is_b_cond(uint32_t word)
 
 static int a64_word_is_cbz_cbnz(uint32_t word)
 {
-    return (word & 0x7e000000u) == 0x34000000u || (word & 0x7e000000u) == 0x35000000u;
+    return (word & 0x7e000000u) == 0x34000000u;
 }
 
 static int a64_word_is_tbz_tbnz(uint32_t word)
 {
-    return (word & 0x7e000000u) == 0x36000000u || (word & 0x7e000000u) == 0x37000000u;
+    return (word & 0x7e000000u) == 0x36000000u;
 }
 
 static int a64_word_is_ldr_literal(uint32_t word)
@@ -419,9 +419,9 @@ static uint32_t a64_invert_conditional_to_skip(const asmkit_inst_t* inst)
             ((word ^ 1u) & 0x0fu);
     }
     if (a64_word_is_cbz_cbnz(word)) {
-        return (word & ~(0x7ffffu << 5)) ^ 0x01000000u | (5u << 5);
+        return ((word & ~(0x7ffffu << 5)) ^ 0x01000000u) | (5u << 5);
     }
-    return (word & ~(0x3fffu << 5)) ^ 0x01000000u | (5u << 5);
+    return ((word & ~(0x3fffu << 5)) ^ 0x01000000u) | (5u << 5);
 }
 
 static asmkit_status_t a64_expand_conditional_abs(const asmkit_inst_t* inst, uint64_t target, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)

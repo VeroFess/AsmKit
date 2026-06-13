@@ -2,7 +2,25 @@
 
 ASMKIT 是一个 C99 多平台反汇编与结构化汇编工具库。
 
-> 状态：`1.0.0` 前版本。公开 C ABI 在 `1.0.0` 前可能变化。
+## 状态
+
+ASMKIT 目前是 `1.0.0` 前版本。公开 C ABI 在 `1.0.0` 前可能变化。
+
+当前现实 all-export 验证套件已经通过，已检查报告中严重不一致为 0，且没有未解决的
+`detail_warning` 条目。测试会把 ASMKIT 反汇编结果与 LLVM MC 和 Capstone
+交叉对比，覆盖 `ntoskrnl.exe` 以及 Debian ELF 共享库导出函数：`libaom`、
+`libatomic`、`libavcodec`、`libcrypto`、`libdav1d`、`libdnnl`、`libffi`、
+`libgcc_s`、`libgmp`、`libjpeg`、`liblz4`、`liblzma`、`libpcre2-8`、
+`libpixman-1`、`libssl`、`libstdc++`、`libunwind`、`libvpx`、`libx265`、
+`libzstd`，以及 OpenBLAS 镜像（`libblas`、`liblapack`、`libopenblas`）。
+
+| 现实测试 | 镜像数 | 导出函数数 | 指令数 | 严重不一致 |
+|---|---:|---:|---:|---:|
+| x86 / i386 exports | 46 | 52,405 | 3,662,582 | 0 |
+| x86-64 / amd64 exports | 48 | 61,514 | 4,289,528 | 0 |
+| ARM / armhf exports | 49 | 38,033 | 2,090,927 | 0 |
+| AArch64 / arm64 exports | 48 | 51,522 | 3,288,230 | 0 |
+| 总计 | 191 | 203,474 | 13,331,267 | 0 |
 
 语言：[English](README.md)
 

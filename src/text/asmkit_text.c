@@ -1,4 +1,5 @@
 #include "core/asmkit_internal.h"
+#include "asmkit/target/arm.h"
 
 #if ASMKIT_ENABLE_TEXT
 typedef struct asmkit_text_builder {
@@ -265,7 +266,7 @@ static int asmkit_text_append_arm_conditional_branch_mnemonic(
     uint16_t h2;
 
     if (inst->arch != ASMKIT_ARCH_ARM ||
-        !asmkit_text_cstr_eq(mnemonic, "b") ||
+        (!asmkit_text_cstr_eq(mnemonic, "b") && !asmkit_text_cstr_eq(mnemonic, "bl")) ||
         (inst->flags & ASMKIT_INST_FLAG_CONDITIONAL) == 0u) {
         return 0;
     }
@@ -291,7 +292,7 @@ static int asmkit_text_append_arm_conditional_branch_mnemonic(
     if (condition_name == 0) {
         return 0;
     }
-    asmkit_text_builder_append_cstr(builder, "b");
+    asmkit_text_builder_append_cstr(builder, mnemonic);
     asmkit_text_builder_append_cstr(builder, condition_name);
     return 1;
 }
@@ -318,6 +319,86 @@ static int asmkit_text_append_arm_cps_mnemonic(
     return 0;
 }
 
+static int asmkit_text_append_arm_rrx_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    uint32_t set_flags;
+
+    if (inst->arch == ASMKIT_ARCH_ARM &&
+        inst->mode == ASMKIT_MODE_ARM_THUMB &&
+        asmkit_text_cstr_eq(mnemonic, "rrx") &&
+        inst->size >= 4u) {
+        asmkit_text_builder_append_cstr(builder, (inst->bytes[0] & 0x10u) != 0u ? "rrxs" : "rrx");
+        return 1;
+    }
+    if (inst->arch != ASMKIT_ARCH_ARM ||
+        !asmkit_text_cstr_eq(mnemonic, "mov") ||
+        inst->operand_count < 2u ||
+        inst->operands[1].kind != ASMKIT_OP_REG ||
+        inst->operands[1].shift_kind != ASMKIT_ARM_SHIFT_RRX) {
+        return 0;
+    }
+    set_flags = 0u;
+    if (inst->mode == ASMKIT_MODE_ARM_A32 && inst->size >= 4u) {
+        set_flags = (asmkit_load32le(inst->bytes) & UINT32_C(0x00100000)) != 0u;
+    }
+    asmkit_text_builder_append_cstr(builder, set_flags ? "rrxs" : "rrx");
+    return 1;
+}
+
+static int asmkit_text_append_arm_it_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    uint32_t condition;
+    uint32_t mask;
+    uint32_t trailing_zeroes;
+    int32_t bit;
+    const char* condition_name;
+
+    if (inst->arch != ASMKIT_ARCH_ARM ||
+        inst->mode != ASMKIT_MODE_ARM_THUMB ||
+        !asmkit_text_cstr_eq(mnemonic, "it") ||
+        inst->size < 2u) {
+        return 0;
+    }
+    if (inst->operand_count >= 2u &&
+        inst->operands[0].kind == ASMKIT_OP_IMM &&
+        inst->operands[1].kind == ASMKIT_OP_IMM) {
+        condition = (uint32_t)inst->operands[0].imm;
+        mask = (uint32_t)inst->operands[1].imm;
+    } else {
+        uint16_t encoded = asmkit_load16le(inst->bytes);
+        condition = (uint32_t)((encoded >> 4u) & 0x0fu);
+        mask = (uint32_t)(encoded & 0x000fu);
+    }
+    if (mask == 0u) {
+        return 0;
+    }
+    if (condition == 0x0fu) {
+        condition = 0x0eu;
+    }
+    condition_name = asmkit_text_aarch64_condition_name(condition);
+    if (condition_name == 0) {
+        return 0;
+    }
+    trailing_zeroes = 0u;
+    while (trailing_zeroes < 4u && (mask & (1u << trailing_zeroes)) == 0u) {
+        ++trailing_zeroes;
+    }
+    asmkit_text_builder_append_cstr(builder, "it");
+    for (bit = 3; bit > (int32_t)trailing_zeroes; --bit) {
+        uint32_t mask_bit = (mask >> (uint32_t)bit) & 1u;
+        asmkit_text_builder_append_char(builder, mask_bit == (condition & 1u) ? 't' : 'e');
+    }
+    asmkit_text_builder_append_char(builder, ' ');
+    asmkit_text_builder_append_cstr(builder, condition_name);
+    return 1;
+}
+
 static int asmkit_text_append_aarch64_conditional_mnemonic(
     asmkit_text_builder_t* builder,
     const char* mnemonic,
@@ -338,6 +419,33 @@ static int asmkit_text_append_aarch64_conditional_mnemonic(
     }
     asmkit_text_builder_append_cstr(builder, "b.");
     asmkit_text_builder_append_cstr(builder, condition);
+    return 1;
+}
+
+static int asmkit_text_append_aarch64_bti_mnemonic(
+    asmkit_text_builder_t* builder,
+    const char* mnemonic,
+    const asmkit_inst_t* inst)
+{
+    int64_t hint;
+
+    if (inst->arch != ASMKIT_ARCH_AARCH64 || !asmkit_text_cstr_eq(mnemonic, "bti")) {
+        return 0;
+    }
+    hint = 0;
+    if (inst->operand_count > 0u && inst->operands[0].kind == ASMKIT_OP_IMM) {
+        hint = inst->operands[0].imm;
+    } else if (inst->size >= 4u) {
+        hint = (int64_t)((asmkit_load32le(inst->bytes) >> 5u) & 0x7fu);
+    }
+    asmkit_text_builder_append_cstr(builder, "bti");
+    if (hint == 34) {
+        asmkit_text_builder_append_cstr(builder, " c");
+    } else if (hint == 36) {
+        asmkit_text_builder_append_cstr(builder, " j");
+    } else if (hint == 38) {
+        asmkit_text_builder_append_cstr(builder, " jc");
+    }
     return 1;
 }
 
@@ -367,8 +475,11 @@ static asmkit_status_t asmkit_text_format_with_operands(
         }
     }
     if (!asmkit_text_append_arm_cps_mnemonic(&builder, mnemonic, inst) &&
+        !asmkit_text_append_arm_rrx_mnemonic(&builder, mnemonic, inst) &&
         !asmkit_text_append_arm_conditional_branch_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_aarch64_conditional_mnemonic(&builder, mnemonic, inst)) {
+        !asmkit_text_append_arm_it_mnemonic(&builder, mnemonic, inst) &&
+        !asmkit_text_append_aarch64_conditional_mnemonic(&builder, mnemonic, inst) &&
+        !asmkit_text_append_aarch64_bti_mnemonic(&builder, mnemonic, inst)) {
         asmkit_text_builder_append_cstr(&builder, mnemonic);
     }
 #if ASMKIT_TEXT_ENABLE_OPERANDS
