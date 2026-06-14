@@ -1,5 +1,21 @@
 #include "core/asmkit_internal.h"
 
+static void asmkit_decode_apply_operand_metadata(asmkit_inst_t* inst)
+{
+    const asmkit_operand_info_t* info;
+    uint32_t index;
+
+    for (index = 0u; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
+        asmkit_operand_t* operand = &inst->operands[index];
+        if (asmkit_get_instruction_operand_info(inst->arch, inst->id, operand->operand_index, &info) == ASMKIT_OK && info != 0) {
+            operand->flags |= info->flags;
+            if (operand->width == 0u && info->width != 0u) {
+                operand->width = info->width;
+            }
+        }
+    }
+}
+
 asmkit_status_t asmkit_decode_one(
     const asmkit_engine_t* engine,
     asmkit_workspace_t* workspace,
@@ -9,6 +25,7 @@ asmkit_status_t asmkit_decode_one(
     asmkit_inst_t* out_inst)
 {
     const asmkit_target_ops_t* ops;
+    asmkit_status_t status;
 
     if (engine == 0 || code == 0 || out_inst == 0) {
         return ASMKIT_ERR_INVALID_ARGUMENT;
@@ -17,7 +34,11 @@ asmkit_status_t asmkit_decode_one(
     if (ops == 0 || ops->decode_one == 0) {
         return ASMKIT_ERR_UNSUPPORTED_ARCH;
     }
-    return ops->decode_one(engine, workspace, code, code_size, address, out_inst);
+    status = ops->decode_one(engine, workspace, code, code_size, address, out_inst);
+    if (status == ASMKIT_OK) {
+        asmkit_decode_apply_operand_metadata(out_inst);
+    }
+    return status;
 }
 
 asmkit_status_t asmkit_decode_block_until(

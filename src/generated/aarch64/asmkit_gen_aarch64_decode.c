@@ -394,12 +394,8 @@ static int a64_td_extended_reg_operand(uint32_t value, const asmkit_a64_td_opera
     if (amount > 4u) {
         return 0;
     }
-    source_width = (extend == 3u || extend == 7u) ? 64u : 32u;
-    if (desc->width == 32u) {
-        if (source_width != 32u || extend == 3u || extend == 7u) {
-            return 0;
-        }
-    } else if (desc->width != 64u) {
+    source_width = desc->width == 32u ? 32u : ((extend == 3u || extend == 7u) ? 64u : 32u);
+    if (desc->width != 32u && desc->width != 64u) {
         return 0;
     }
     reg_id = a64_td_gpr_id(value & 0x1fu, source_width, 0u);

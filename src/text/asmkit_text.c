@@ -143,40 +143,28 @@ static asmkit_status_t asmkit_text_copy(const char* text, char* out_text, size_t
     return asmkit_text_builder_finish(&builder, out_result);
 }
 
-static const char* asmkit_text_register_name(asmkit_arch_t arch, uint64_t encoding, uint16_t width)
+static const char* asmkit_text_register_name(asmkit_arch_t arch, uint64_t register_id, uint16_t width)
 {
-    const asmkit_register_info_t* width_agnostic_match;
-    uint32_t count;
-    uint32_t i;
+    const asmkit_register_info_t* info;
 
-    width_agnostic_match = 0;
-    count = asmkit_get_register_count(arch);
-    for (i = 0u; i < count; ++i) {
-        const asmkit_register_info_t* info;
-        if (asmkit_get_register_info_by_index(arch, i, &info) != ASMKIT_OK || info->encoding != (uint16_t)encoding) {
-            continue;
-        }
-        if (info->width == width) {
-            return info->name;
-        }
-        if (width_agnostic_match == 0) {
-            width_agnostic_match = info;
-        }
+    (void)width;
+    if (register_id <= UINT32_MAX && asmkit_get_register_info(arch, (uint32_t)register_id, &info) == ASMKIT_OK) {
+        return info->name;
     }
-    return width_agnostic_match != 0 ? width_agnostic_match->name : 0;
+    return 0;
 }
 
-static void asmkit_text_append_register(asmkit_text_builder_t* builder, asmkit_arch_t arch, uint64_t encoding, uint16_t width)
+static void asmkit_text_append_register(asmkit_text_builder_t* builder, asmkit_arch_t arch, uint64_t register_id, uint16_t width)
 {
     const char* name;
 
-    name = asmkit_text_register_name(arch, encoding, width);
+    name = asmkit_text_register_name(arch, register_id, width);
     if (name != 0) {
         asmkit_text_builder_append_cstr(builder, name);
         return;
     }
     asmkit_text_builder_append_char(builder, 'r');
-    asmkit_text_builder_append_unsigned_dec(builder, encoding);
+    asmkit_text_builder_append_unsigned_dec(builder, register_id);
 }
 
 static const asmkit_operand_info_t* asmkit_text_operand_info(const asmkit_inst_t* inst, const asmkit_operand_t* operand)

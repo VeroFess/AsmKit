@@ -15,7 +15,7 @@ extern "C" {
 
 #include "wasm_asmkit_wasm_mnemonic.inc"
 
-#define ASMKIT_WASM_MNEMONIC_COUNT 582u
+#define ASMKIT_WASM_MNEMONIC_COUNT 569u
 
 /* Target register IDs are stable metadata/operand register IDs. */
 typedef enum asmkit_wasm_register {

@@ -103,12 +103,20 @@ static const asmkit_bpf_td_record_t* bpf_find_record(const asmkit_engine_t* engi
     return 0;
 }
 
-static void bpf_reg(asmkit_operand_t* op, uint8_t index, uint8_t reg)
+static uint32_t bpf_reg_id(uint8_t reg, uint8_t width)
+{
+    if (reg > 11u) {
+        return ASMKIT_BPF_REG_INVALID;
+    }
+    return (width == 32u ? ASMKIT_BPF_REG_W0 : ASMKIT_BPF_REG_R0) + (uint32_t)reg * 2u;
+}
+
+static void bpf_reg(asmkit_operand_t* op, uint8_t index, uint8_t reg, uint8_t width)
 {
     op->kind = ASMKIT_OP_REG;
     op->operand_index = index;
-    op->reg = reg;
-    op->width = 64u;
+    op->reg = bpf_reg_id(reg, width);
+    op->width = width;
 }
 
 static void bpf_imm(asmkit_operand_t* op, uint8_t index, int64_t imm, uint8_t width)
@@ -121,7 +129,7 @@ static void bpf_imm(asmkit_operand_t* op, uint8_t index, int64_t imm, uint8_t wi
 
 static void bpf_mem(asmkit_operand_t* op, uint8_t index, uint8_t base, int16_t off)
 {
-    *op = asmkit_operand_mem(base, off, 64u);
+    *op = asmkit_operand_mem(bpf_reg_id(base, 64u), off, 64u);
     op->operand_index = index;
 }
 
@@ -234,27 +242,27 @@ asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* engine, const u
     switch (record->form) {
     case ASMKIT_BPF_TD_FORM_ALU_RR:
         out_inst->operand_count = 2u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
-        bpf_reg(&out_inst->operands[1], 1u, src);
+        bpf_reg(&out_inst->operands[0], 0u, dst, record->width);
+        bpf_reg(&out_inst->operands[1], 1u, src, record->width);
         break;
     case ASMKIT_BPF_TD_FORM_ALU_RI:
         out_inst->operand_count = 2u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
+        bpf_reg(&out_inst->operands[0], 0u, dst, record->width);
         bpf_imm(&out_inst->operands[1], 1u, imm, 32u);
         break;
     case ASMKIT_BPF_TD_FORM_ALU_DST:
         out_inst->operand_count = 1u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
+        bpf_reg(&out_inst->operands[0], 0u, dst, record->width);
         break;
     case ASMKIT_BPF_TD_FORM_LOAD_MEM:
         out_inst->operand_count = 2u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
+        bpf_reg(&out_inst->operands[0], 0u, dst, record->width);
         bpf_mem(&out_inst->operands[1], 1u, src, off);
         break;
     case ASMKIT_BPF_TD_FORM_STORE_MEM_REG:
         out_inst->operand_count = 2u;
         bpf_mem(&out_inst->operands[0], 0u, dst, off);
-        bpf_reg(&out_inst->operands[1], 1u, src);
+        bpf_reg(&out_inst->operands[1], 1u, src, record->width);
         break;
     case ASMKIT_BPF_TD_FORM_STORE_MEM_IMM:
         out_inst->operand_count = 2u;
@@ -268,13 +276,13 @@ asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* engine, const u
     case ASMKIT_BPF_TD_FORM_BRANCH_RR:
         out_inst->operand_count = 3u;
         bpf_pc_rel(&out_inst->operands[0], address, off);
-        bpf_reg(&out_inst->operands[1], 1u, dst);
-        bpf_reg(&out_inst->operands[2], 2u, src);
+        bpf_reg(&out_inst->operands[1], 1u, dst, record->width);
+        bpf_reg(&out_inst->operands[2], 2u, src, record->width);
         break;
     case ASMKIT_BPF_TD_FORM_BRANCH_RI:
         out_inst->operand_count = 3u;
         bpf_pc_rel(&out_inst->operands[0], address, off);
-        bpf_reg(&out_inst->operands[1], 1u, dst);
+        bpf_reg(&out_inst->operands[1], 1u, dst, record->width);
         bpf_imm(&out_inst->operands[2], 2u, imm, 32u);
         break;
     case ASMKIT_BPF_TD_FORM_CALL_IMM:
@@ -283,12 +291,12 @@ asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* engine, const u
         break;
     case ASMKIT_BPF_TD_FORM_CALL_REG:
         out_inst->operand_count = 1u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
+        bpf_reg(&out_inst->operands[0], 0u, dst, 64u);
         break;
     case ASMKIT_BPF_TD_FORM_LD_IMM64:
         imm64 = (uint64_t)(uint32_t)imm | ((uint64_t)asmkit_load32le(code + 12) << 32);
         out_inst->operand_count = 2u;
-        bpf_reg(&out_inst->operands[0], 0u, dst);
+        bpf_reg(&out_inst->operands[0], 0u, dst, 64u);
         bpf_imm(&out_inst->operands[1], 1u, (int64_t)imm64, 64u);
         break;
     case ASMKIT_BPF_TD_FORM_LOAD_ABS:
@@ -297,7 +305,7 @@ asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* engine, const u
         break;
     case ASMKIT_BPF_TD_FORM_LOAD_IND:
         out_inst->operand_count = 1u;
-        bpf_reg(&out_inst->operands[0], 0u, src);
+        bpf_reg(&out_inst->operands[0], 0u, src, 64u);
         break;
     default:
         break;

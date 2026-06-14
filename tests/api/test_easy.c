@@ -42,7 +42,7 @@ int asmkit_test_easy_api(void)
     ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_ALU);
     ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_BPF_ADD);
     ASMKIT_CHECK(inst.operand_count == 2u);
-    ASMKIT_CHECK(inst.operands[0].reg == 1u);
+    ASMKIT_CHECK(inst.operands[0].reg == ASMKIT_BPF_REG_R1);
     ASMKIT_CHECK(inst.operands[1].imm == 5);
 
     ASMKIT_CHECK(asmkit_decoder_init(&decoder, ASMKIT_ARCH_BPF, ASMKIT_MODE_BPF64) == ASMKIT_OK);

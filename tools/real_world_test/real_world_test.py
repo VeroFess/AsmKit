@@ -1597,9 +1597,10 @@ def operand_to_atoms(arch: str, operand, source: str):
     elif kind == "mem":
         if operand.get("base"):
             atoms.append(("mem-base", operand["base"]))
-        if operand.get("index"):
+        has_index = bool(operand.get("index"))
+        if has_index:
             atoms.append(("mem-index", operand["index"]))
-        if operand.get("scale", 1) not in {0, 1}:
+        if has_index and operand.get("scale", 1) not in {0, 1}:
             atoms.append(("mem-scale", operand["scale"]))
         if operand.get("disp", 0) != 0:
             atoms.append(("mem-disp", operand["disp"]))

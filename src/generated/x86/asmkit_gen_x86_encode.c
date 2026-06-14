@@ -175,11 +175,11 @@ static int x86_register_info_matches_class(const asmkit_register_info_t* info, u
     case ASMKIT_X86_REGCLASS_GPR:
         return x86_register_info_is_gpr(info) && (expected_width == 0u || info->width == expected_width);
     case ASMKIT_X86_REGCLASS_XMM:
-        return x86_register_id_in_range(reg, ASMKIT_X86_REG_XMM0, ASMKIT_X86_REG_XMM31) && info->width == 128u;
+        return info->width == 128u && info->encoding < 32u;
     case ASMKIT_X86_REGCLASS_YMM:
-        return x86_register_id_in_range(reg, ASMKIT_X86_REG_YMM0, ASMKIT_X86_REG_YMM9) && info->width == 256u;
+        return info->width == 256u && info->encoding < 32u;
     case ASMKIT_X86_REGCLASS_ZMM:
-        return x86_register_id_in_range(reg, ASMKIT_X86_REG_ZMM0, ASMKIT_X86_REG_ZMM9) && info->width == 512u;
+        return info->width == 512u && info->encoding < 32u;
     case ASMKIT_X86_REGCLASS_MMX:
         return x86_register_id_in_range(reg, ASMKIT_X86_REG_MM0, ASMKIT_X86_REG_MM7) && info->width == 64u;
     case ASMKIT_X86_REGCLASS_MASK:

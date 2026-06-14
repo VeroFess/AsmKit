@@ -8,7 +8,8 @@
 #include "asmkit/target/wasm.h"
 
 #define ASMKIT_INSTRUCTION_CORPUS_TARGET_CASE_COUNT 6u
-#define ASMKIT_INSTRUCTION_CORPUS_TARGET_DETAIL_CASE_COUNT 4u
+#define ASMKIT_INSTRUCTION_CORPUS_TARGET_DETAIL_CASE_COUNT 5u
+#define ASMKIT_INSTRUCTION_CORPUS_TARGET_REGISTER_EFFECT_CHECK_COUNT 0u
 #define ASMKIT_INSTRUCTION_CORPUS_TARGET_ARCH ASMKIT_ARCH_WASM
 
 static inline int asmkit_instruction_corpus_init_engine(asmkit_engine_t* engine, asmkit_arch_t arch, asmkit_mode_t mode)
@@ -20,42 +21,15 @@ static inline int asmkit_instruction_corpus_init_engine(asmkit_engine_t* engine,
     return 0;
 }
 
-static inline void asmkit_instruction_corpus_print_bytes(const uint8_t* bytes, uint32_t size)
+static inline int asmkit_instruction_corpus_mnemonic_matches(asmkit_mnemonic_id_t actual, asmkit_mnemonic_id_t expected)
 {
-    uint32_t index;
-    for (index = 0u; index < size; ++index) {
-        printf("%02x", (unsigned)bytes[index]);
+    if (actual == expected) {
+        return 1;
     }
+    return 0;
 }
 
 #if ASMKIT_INSTRUCTION_CORPUS_TARGET_DETAIL_CASE_COUNT != 0u
-static inline void asmkit_instruction_corpus_print_operands(const asmkit_inst_t* inst)
-{
-    uint32_t index;
-    for (index = 0u; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
-        const asmkit_operand_t* operand = &inst->operands[index];
-        printf(
-            " operand[%u]={kind=%u flags=%u reg=%llu shift_reg=%llu imm=%lld abs=%llu width=%u mem.base=%llu mem.index=%llu mem.disp=%lld mem.scale=%u mem.addr=%u shift=%u/%u extend=%u/%u}",
-            (unsigned)index,
-            (unsigned)operand->kind,
-            (unsigned)operand->flags,
-            (unsigned long long)operand->reg,
-            (unsigned long long)operand->shift_reg,
-            (long long)operand->imm,
-            (unsigned long long)operand->abs_target,
-            (unsigned)operand->width,
-            (unsigned long long)operand->mem.base,
-            (unsigned long long)operand->mem.index,
-            (long long)operand->mem.displacement,
-            (unsigned)operand->mem.scale,
-            (unsigned)operand->mem.address_width,
-            (unsigned)operand->shift_kind,
-            (unsigned)operand->shift_amount,
-            (unsigned)operand->extend_kind,
-            (unsigned)operand->extend_amount);
-    }
-}
-
 #define ASMKIT_CORPUS_CHECK_KIND 1u
 #define ASMKIT_CORPUS_CHECK_REG 2u
 #define ASMKIT_CORPUS_CHECK_IMM 4u
@@ -64,6 +38,8 @@ static inline void asmkit_instruction_corpus_print_operands(const asmkit_inst_t*
 #define ASMKIT_CORPUS_CHECK_MEM_DISP 32u
 #define ASMKIT_CORPUS_CHECK_MEM_SCALE 64u
 #define ASMKIT_CORPUS_CHECK_WIDTH 128u
+#define ASMKIT_CORPUS_CHECK_FLAGS 256u
+#define ASMKIT_CORPUS_CHECK_MEM_SEGMENT 512u
 
 static inline uint32_t asmkit_instruction_corpus_arm_reg_bit(uint64_t reg)
 {
@@ -228,7 +204,7 @@ static inline int asmkit_instruction_corpus_reg_operand_matches(const asmkit_ope
         return 1;
     }
     if (operand->kind == ASMKIT_OP_MEM) {
-        return operand->mem.base == expected_reg || operand->mem.index == expected_reg;
+        return operand->mem.base == expected_reg || operand->mem.index == expected_reg || operand->mem.segment == expected_reg;
     }
     if (operand->kind != ASMKIT_OP_REG) {
         return 0;
@@ -315,7 +291,8 @@ static inline int asmkit_instruction_corpus_operand_scale_matches(const asmkit_o
 
 static inline int asmkit_instruction_corpus_operand_matches(
     const asmkit_inst_t* inst, uint32_t actual_index, uint32_t checks, asmkit_operand_kind_t kind,
-    uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, int64_t mem_disp, uint32_t mem_scale, uint32_t width,
+    uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, uint64_t mem_segment, int64_t mem_disp,
+    uint32_t mem_scale, uint32_t width, uint32_t flags,
     uint32_t* next_cursor)
 {
     const asmkit_operand_t* operand;
@@ -366,9 +343,15 @@ static inline int asmkit_instruction_corpus_operand_matches(
             return 0;
         }
     }
-    if ((checks & (ASMKIT_CORPUS_CHECK_MEM_BASE | ASMKIT_CORPUS_CHECK_MEM_INDEX | ASMKIT_CORPUS_CHECK_MEM_DISP | ASMKIT_CORPUS_CHECK_MEM_SCALE)) != 0u) {
+    if ((checks & ASMKIT_CORPUS_CHECK_FLAGS) != 0u && (operand->flags & flags) != flags) {
+        return 0;
+    }
+    if ((checks & (ASMKIT_CORPUS_CHECK_MEM_BASE | ASMKIT_CORPUS_CHECK_MEM_INDEX | ASMKIT_CORPUS_CHECK_MEM_DISP | ASMKIT_CORPUS_CHECK_MEM_SCALE | ASMKIT_CORPUS_CHECK_MEM_SEGMENT)) != 0u) {
         if (operand->kind == ASMKIT_OP_MEM) {
             if ((checks & ASMKIT_CORPUS_CHECK_MEM_BASE) != 0u && operand->mem.base != mem_base) {
+                return 0;
+            }
+            if ((checks & ASMKIT_CORPUS_CHECK_MEM_SEGMENT) != 0u && operand->mem.segment != mem_segment) {
                 return 0;
             }
             if ((checks & ASMKIT_CORPUS_CHECK_MEM_INDEX) != 0u && operand->mem.index != mem_index &&
@@ -443,6 +426,104 @@ static inline int asmkit_instruction_corpus_operand_matches(
     return 1;
 }
 
+#if ASMKIT_INSTRUCTION_CORPUS_TARGET_REGISTER_EFFECT_CHECK_COUNT != 0u
+static inline uint32_t asmkit_instruction_corpus_operand_register_effect_flags(
+    const asmkit_operand_t* operand, uint64_t expected_reg)
+{
+    uint32_t effect_flags;
+    if (!asmkit_instruction_corpus_reg_operand_matches(operand, expected_reg)) {
+        return 0;
+    }
+    if (operand->kind == ASMKIT_OP_MEM &&
+        (operand->mem.base == expected_reg || operand->mem.index == expected_reg || operand->mem.segment == expected_reg)) {
+        effect_flags = ASMKIT_REGISTER_EFFECT_READ;
+        if ((operand->flags & ASMKIT_OPERAND_FLAG_WRITE) != 0u &&
+            (operand->mem.base == expected_reg || operand->mem.index == expected_reg)) {
+            effect_flags |= ASMKIT_REGISTER_EFFECT_WRITE;
+        }
+        return effect_flags;
+    }
+    if (operand->kind == ASMKIT_OP_PC_REL && asmkit_instruction_corpus_is_arm_pc(expected_reg)) {
+        return ASMKIT_REGISTER_EFFECT_READ;
+    }
+    effect_flags = 0u;
+    if ((operand->flags & ASMKIT_OPERAND_FLAG_READ) != 0u) {
+        effect_flags |= ASMKIT_REGISTER_EFFECT_READ;
+    }
+    if ((operand->flags & ASMKIT_OPERAND_FLAG_WRITE) != 0u) {
+        effect_flags |= ASMKIT_REGISTER_EFFECT_WRITE;
+    }
+    return effect_flags;
+}
+
+static inline int asmkit_instruction_corpus_x86_flags_register(uint64_t reg)
+{
+#ifdef ASMKIT_TARGET_X86_H
+    return reg == ASMKIT_X86_REG_EFLAGS || reg == ASMKIT_X86_REG_RFLAGS;
+#else
+    (void)reg;
+    return 0;
+#endif
+}
+
+static inline int asmkit_instruction_corpus_register_effect_reg_matches(asmkit_arch_t arch, uint64_t actual_reg, uint64_t expected_reg)
+{
+    const asmkit_register_info_t* actual_info;
+    const asmkit_register_info_t* expected_info;
+    if (actual_reg == expected_reg) {
+        return 1;
+    }
+    if (arch == ASMKIT_ARCH_X86 && asmkit_instruction_corpus_x86_flags_register(actual_reg) && asmkit_instruction_corpus_x86_flags_register(expected_reg)) {
+        return 1;
+    }
+    if (asmkit_get_register_info(arch, (uint32_t)actual_reg, &actual_info) != ASMKIT_OK ||
+        asmkit_get_register_info(arch, (uint32_t)expected_reg, &expected_info) != ASMKIT_OK ||
+        actual_info == 0 || expected_info == 0) {
+        return 0;
+    }
+    if (actual_info->arch != expected_info->arch || actual_info->encoding != expected_info->encoding) {
+        return 0;
+    }
+    if (actual_info->width == 0u || expected_info->width == 0u) {
+        return 0;
+    }
+    if (actual_info->width <= expected_info->width) {
+        return 1;
+    }
+    return arch == ASMKIT_ARCH_X86 && expected_info->width == 32u && actual_info->width == 64u;
+}
+
+static inline int asmkit_instruction_corpus_effect_flags_satisfied(uint32_t seen_flags, uint32_t expected_flags)
+{
+    return (seen_flags & expected_flags) == expected_flags;
+}
+
+static inline int asmkit_instruction_corpus_has_register_effect(
+    const asmkit_inst_t* inst, uint64_t expected_reg, uint32_t flags)
+{
+    const asmkit_instruction_register_effect_t* effect;
+    uint32_t seen_flags;
+    uint32_t index;
+    seen_flags = 0u;
+    for (index = 0u; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
+        seen_flags |= asmkit_instruction_corpus_operand_register_effect_flags(&inst->operands[index], expected_reg);
+        if (asmkit_instruction_corpus_effect_flags_satisfied(seen_flags, flags)) {
+            return 1;
+        }
+    }
+    for (index = 0u; asmkit_get_instruction_register_effect(inst->arch, inst->id, index, &effect) == ASMKIT_OK; ++index) {
+        if (effect != 0 && asmkit_instruction_corpus_register_effect_reg_matches(inst->arch, effect->register_id, expected_reg)) {
+            seen_flags |= effect->flags;
+        }
+        if (asmkit_instruction_corpus_effect_flags_satisfied(seen_flags, flags)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+#endif
+
 static inline int asmkit_instruction_corpus_composite_operand(const asmkit_operand_t* operand)
 {
     return operand->kind == ASMKIT_OP_PC_REL ||
@@ -453,13 +534,14 @@ static inline int asmkit_instruction_corpus_composite_operand(const asmkit_opera
 
 static inline int asmkit_instruction_corpus_expect_operand(
     const asmkit_inst_t* inst, uint32_t* cursor, uint32_t checks, asmkit_operand_kind_t kind,
-    uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, int64_t mem_disp, uint32_t mem_scale, uint32_t width)
+    uint64_t reg, int64_t imm, uint64_t mem_base, uint64_t mem_index, uint64_t mem_segment, int64_t mem_disp,
+    uint32_t mem_scale, uint32_t width, uint32_t flags)
 {
     uint32_t index;
     uint32_t next_cursor;
     for (index = *cursor; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
         next_cursor = asmkit_instruction_corpus_composite_operand(&inst->operands[index]) ? index : index + 1u;
-        if (asmkit_instruction_corpus_operand_matches(inst, index, checks, kind, reg, imm, mem_base, mem_index, mem_disp, mem_scale, width, &next_cursor)) {
+        if (asmkit_instruction_corpus_operand_matches(inst, index, checks, kind, reg, imm, mem_base, mem_index, mem_segment, mem_disp, mem_scale, width, flags, &next_cursor)) {
             *cursor = next_cursor;
             return 1;
         }
@@ -469,7 +551,7 @@ static inline int asmkit_instruction_corpus_expect_operand(
         for (index = 0u; index < *cursor && index < ASMKIT_MAX_OPERANDS; ++index) {
             next_cursor = *cursor;
             if (inst->operands[index].kind != ASMKIT_OP_MEM &&
-                asmkit_instruction_corpus_operand_matches(inst, index, checks, kind, reg, imm, mem_base, mem_index, mem_disp, mem_scale, width, &next_cursor)) {
+                asmkit_instruction_corpus_operand_matches(inst, index, checks, kind, reg, imm, mem_base, mem_index, mem_segment, mem_disp, mem_scale, width, flags, &next_cursor)) {
                 return 1;
             }
         }
@@ -478,30 +560,6 @@ static inline int asmkit_instruction_corpus_expect_operand(
 }
 
 #endif
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00000[] = {
-    0x0bu,
-};
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00001[] = {
-    0x45u,
-};
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00002[] = {
-    0x20u, 0x00u,
-};
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00003[] = {
-    0x20u, 0x01u,
-};
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00004[] = {
-    0x41u, 0x20u,
-};
-
-static const uint8_t asmkit_instruction_corpus_wasm32_00005[] = {
-    0x10u, 0xc9u, 0x01u,
-};
 
 static int asmkit_instruction_corpus_wasm32_chunk_000(
     asmkit_engine_t* engine,
@@ -516,337 +574,174 @@ static int asmkit_instruction_corpus_wasm32_chunk_000(
     asmkit_status_t encode_status;
     uint32_t operand_cursor;
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00000, sizeof(asmkit_instruction_corpus_wasm32_00000), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31290u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00000),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00000, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00000));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00000[] = {0x0bu};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00000, sizeof(asmkit_instruction_corpus_wasm32_00000), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00000)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31290u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00000));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00000, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00000));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00000));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00000, inst.size) == 0);
+        ASMKIT_CHECK(asmkit_instruction_corpus_mnemonic_matches(inst.mnemonic_id, ASMKIT_WASM_END) != 0);
+        ++(*detail_count);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00000, inst.size) == 0);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00001, sizeof(asmkit_instruction_corpus_wasm32_00001), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31291u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00001),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00001, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00001));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00001[] = {0x45u};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00001, sizeof(asmkit_instruction_corpus_wasm32_00001), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00001)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31291u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00001));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00001, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00001));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00001));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00001, inst.size) == 0);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00001, inst.size) == 0);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00002, sizeof(asmkit_instruction_corpus_wasm32_00002), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31292u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00002),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00002, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00002));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00002[] = {0x20u, 0x00u};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00002, sizeof(asmkit_instruction_corpus_wasm32_00002), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00002)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31292u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00002));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00002, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00002));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00002));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00002, inst.size) == 0);
+        ASMKIT_CHECK(inst.operand_count >= 1u);
+        operand_cursor = 0u;
+        if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
+            UINT64_C(0), INT64_C(0),
+            UINT64_C(0), UINT64_C(0), UINT64_C(0),
+            INT64_C(0), 0u, 0u,
+            0u)) {
+            ASMKIT_CHECK(0);
+        }
+        ++(*detail_count);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00002, inst.size) == 0);
-    operand_cursor = 0u;
-    if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
-        UINT64_C(0), INT64_C(0),
-        UINT64_C(0), UINT64_C(0),
-        INT64_C(0), 0u, 0u)) {
-        printf(
-            "instruction corpus operand detail mismatch: case=%u arch=%u mode=%u id=%u mnemonic=%u class=%u flags=%u expected_operand=%u operand_count=%u bytes=",
-            31292u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.id,
-            (unsigned)inst.mnemonic_id,
-            (unsigned)inst.inst_class,
-            (unsigned)inst.flags,
-            0u,
-            (unsigned)inst.operand_count);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00002, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00002));
-        printf("\n");
-        asmkit_instruction_corpus_print_operands(&inst);
-        printf("\n");
-        ASMKIT_CHECK(0);
-    }
-    ++(*detail_count);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00003, sizeof(asmkit_instruction_corpus_wasm32_00003), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31293u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00003),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00003, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00003));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00003[] = {0x20u, 0x01u};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00003, sizeof(asmkit_instruction_corpus_wasm32_00003), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00003)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31293u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00003));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00003, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00003));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00003));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00003, inst.size) == 0);
+        ASMKIT_CHECK(inst.operand_count >= 1u);
+        operand_cursor = 0u;
+        if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
+            UINT64_C(0), INT64_C(1),
+            UINT64_C(0), UINT64_C(0), UINT64_C(0),
+            INT64_C(0), 0u, 0u,
+            0u)) {
+            ASMKIT_CHECK(0);
+        }
+        ++(*detail_count);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00003, inst.size) == 0);
-    operand_cursor = 0u;
-    if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
-        UINT64_C(0), INT64_C(1),
-        UINT64_C(0), UINT64_C(0),
-        INT64_C(0), 0u, 0u)) {
-        printf(
-            "instruction corpus operand detail mismatch: case=%u arch=%u mode=%u id=%u mnemonic=%u class=%u flags=%u expected_operand=%u operand_count=%u bytes=",
-            31293u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.id,
-            (unsigned)inst.mnemonic_id,
-            (unsigned)inst.inst_class,
-            (unsigned)inst.flags,
-            0u,
-            (unsigned)inst.operand_count);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00003, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00003));
-        printf("\n");
-        asmkit_instruction_corpus_print_operands(&inst);
-        printf("\n");
-        ASMKIT_CHECK(0);
-    }
-    ++(*detail_count);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00004, sizeof(asmkit_instruction_corpus_wasm32_00004), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31294u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00004),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00004, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00004));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00004[] = {0x41u, 0x20u};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00004, sizeof(asmkit_instruction_corpus_wasm32_00004), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00004)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31294u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00004));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00004, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00004));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00004));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00004, inst.size) == 0);
+        ASMKIT_CHECK(inst.operand_count >= 1u);
+        operand_cursor = 0u;
+        if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_IMM,
+            UINT64_C(0), INT64_C(32),
+            UINT64_C(0), UINT64_C(0), UINT64_C(0),
+            INT64_C(0), 0u, 0u,
+            0u)) {
+            ASMKIT_CHECK(0);
+        }
+        ++(*detail_count);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00004, inst.size) == 0);
-    operand_cursor = 0u;
-    if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_IMM,
-        UINT64_C(0), INT64_C(32),
-        UINT64_C(0), UINT64_C(0),
-        INT64_C(0), 0u, 0u)) {
-        printf(
-            "instruction corpus operand detail mismatch: case=%u arch=%u mode=%u id=%u mnemonic=%u class=%u flags=%u expected_operand=%u operand_count=%u bytes=",
-            31294u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.id,
-            (unsigned)inst.mnemonic_id,
-            (unsigned)inst.inst_class,
-            (unsigned)inst.flags,
-            0u,
-            (unsigned)inst.operand_count);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00004, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00004));
-        printf("\n");
-        asmkit_instruction_corpus_print_operands(&inst);
-        printf("\n");
-        ASMKIT_CHECK(0);
-    }
-    ++(*detail_count);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
-    status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00005, sizeof(asmkit_instruction_corpus_wasm32_00005), UINT64_C(0x10000000), &inst);
-    if (status != ASMKIT_OK) {
-        printf(
-            "instruction corpus decode failed: case=%u arch=%u mode=%u size=%u status=%d bytes=",
-            31295u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00005),
-            (int)status);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00005, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00005));
-        printf("\n");
+    {
+        uint8_t asmkit_instruction_corpus_wasm32_00005[] = {0x10u, 0xc9u, 0x01u};
+        status = asmkit_decode_one(engine, 0, asmkit_instruction_corpus_wasm32_00005, sizeof(asmkit_instruction_corpus_wasm32_00005), UINT64_C(0x10000000), &inst);
         ASMKIT_CHECK(status == ASMKIT_OK);
-    }
-    ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
-    ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
-    if (inst.size != sizeof(asmkit_instruction_corpus_wasm32_00005)) {
-        printf(
-            "instruction corpus size mismatch: case=%u arch=%u mode=%u got=%u expected=%u bytes=",
-            31295u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.size,
-            (unsigned)sizeof(asmkit_instruction_corpus_wasm32_00005));
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00005, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00005));
-        printf("\n");
+        ASMKIT_CHECK(inst.arch == ASMKIT_ARCH_WASM);
+        ASMKIT_CHECK(inst.mode == ASMKIT_MODE_WASM32);
         ASMKIT_CHECK(inst.size == sizeof(asmkit_instruction_corpus_wasm32_00005));
+        ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
+        ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
+        ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00005, inst.size) == 0);
+        ASMKIT_CHECK(asmkit_instruction_corpus_mnemonic_matches(inst.mnemonic_id, ASMKIT_WASM_CALL) != 0);
+        ASMKIT_CHECK(inst.operand_count >= 1u);
+        operand_cursor = 0u;
+        if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
+            UINT64_C(0), INT64_C(201),
+            UINT64_C(0), UINT64_C(0), UINT64_C(0),
+            INT64_C(0), 0u, 0u,
+            0u)) {
+            ASMKIT_CHECK(0);
+        }
+        ++(*detail_count);
+        memset(out, 0, sizeof(out));
+        memset(&encode_result, 0, sizeof(encode_result));
+        encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
+        if (encode_status == ASMKIT_OK &&
+            encode_result.size == inst.size &&
+            memcmp(out, inst.bytes, inst.size) == 0) {
+            ++(*roundtrip_count);
+        }
+        ++(*decoded_count);
     }
-    ASMKIT_CHECK(inst.size <= ASMKIT_MAX_INST_BYTES);
-    ASMKIT_CHECK(inst.mnemonic_id != ASMKIT_MNEMONIC_INVALID);
-    ASMKIT_CHECK(memcmp(inst.bytes, asmkit_instruction_corpus_wasm32_00005, inst.size) == 0);
-    operand_cursor = 0u;
-    if (!asmkit_instruction_corpus_expect_operand(&inst, &operand_cursor, 5u, ASMKIT_OP_WASM_INDEX,
-        UINT64_C(0), INT64_C(201),
-        UINT64_C(0), UINT64_C(0),
-        INT64_C(0), 0u, 0u)) {
-        printf(
-            "instruction corpus operand detail mismatch: case=%u arch=%u mode=%u id=%u mnemonic=%u class=%u flags=%u expected_operand=%u operand_count=%u bytes=",
-            31295u,
-            (unsigned)ASMKIT_ARCH_WASM,
-            (unsigned)ASMKIT_MODE_WASM32,
-            (unsigned)inst.id,
-            (unsigned)inst.mnemonic_id,
-            (unsigned)inst.inst_class,
-            (unsigned)inst.flags,
-            0u,
-            (unsigned)inst.operand_count);
-        asmkit_instruction_corpus_print_bytes(asmkit_instruction_corpus_wasm32_00005, (uint32_t)sizeof(asmkit_instruction_corpus_wasm32_00005));
-        printf("\n");
-        asmkit_instruction_corpus_print_operands(&inst);
-        printf("\n");
-        ASMKIT_CHECK(0);
-    }
-    ++(*detail_count);
-    memset(out, 0, sizeof(out));
-    memset(&encode_result, 0, sizeof(encode_result));
-    encode_status = asmkit_encode_inst(engine, 0, &inst, 0, out, sizeof(out), &encode_result);
-    if (encode_status == ASMKIT_OK &&
-        encode_result.size == inst.size &&
-        memcmp(out, inst.bytes, inst.size) == 0) {
-        ++(*roundtrip_count);
-    }
-    ++(*decoded_count);
 
     return 0;
 }
