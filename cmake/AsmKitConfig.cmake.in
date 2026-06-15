@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+set(ASMKIT_ENABLE_TEXT "@ASMKIT_ENABLE_TEXT@")
+set(ASMKIT_FREESTANDING "@ASMKIT_FREESTANDING@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/AsmKitTargets.cmake")
+
+check_required_components(AsmKit)

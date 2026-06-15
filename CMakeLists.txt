@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 project(AsmKit VERSION 0.1.0 LANGUAGES C)
 
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
 option(ASMKIT_ENABLE_TEXT "Enable optional instruction text formatting" OFF)
 option(ASMKIT_ENABLE_TESTS "Build tests" ON)
 option(ASMKIT_FREESTANDING "Avoid libc-dependent code paths" ON)
@@ -91,7 +94,8 @@ add_library(asmkit STATIC
 
 target_include_directories(asmkit
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/x86
@@ -113,6 +117,42 @@ endif()
 set_target_properties(asmkit PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED YES C_EXTENSIONS NO)
 
 asmkit_enable_strict_warnings(asmkit)
+
+install(TARGETS asmkit
+  EXPORT AsmKitTargets
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.inc")
+
+set(ASMKIT_INSTALL_CMAKEDIR
+  "${CMAKE_INSTALL_LIBDIR}/cmake/AsmKit"
+  CACHE STRING "Install destination for AsmKit CMake package files")
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/AsmKitConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/AsmKitConfig.cmake"
+  INSTALL_DESTINATION "${ASMKIT_INSTALL_CMAKEDIR}")
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/AsmKitConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion)
+
+install(EXPORT AsmKitTargets
+  FILE AsmKitTargets.cmake
+  NAMESPACE AsmKit::
+  DESTINATION "${ASMKIT_INSTALL_CMAKEDIR}")
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/AsmKitConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/AsmKitConfigVersion.cmake"
+  DESTINATION "${ASMKIT_INSTALL_CMAKEDIR}")
 
 if(ASMKIT_ENABLE_TESTS)
   enable_testing()
