@@ -117,7 +117,7 @@ static const asmkit_wasm_td_opcode_range_t* wasm_td_opcode_range(uint8_t prefix,
     return 0;
 }
 
-static int wasm_read_uleb32(const uint8_t* code, size_t code_size, size_t* offset, uint32_t* value)
+static int wasm_read_uleb32(const uint8_t* ASMKIT_RESTRICT_WASM_CODE code, size_t code_size, size_t* ASMKIT_RESTRICT_WASM_SCRATCH offset, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH value)
 {
     uint32_t result;
     uint32_t shift;
@@ -142,7 +142,7 @@ static int wasm_read_uleb32(const uint8_t* code, size_t code_size, size_t* offse
     return 0;
 }
 
-static int wasm_read_sleb64(const uint8_t* code, size_t code_size, size_t* offset, int64_t* value)
+static int wasm_read_sleb64(const uint8_t* ASMKIT_RESTRICT_WASM_CODE code, size_t code_size, size_t* ASMKIT_RESTRICT_WASM_SCRATCH offset, int64_t* ASMKIT_RESTRICT_WASM_SCRATCH value)
 {
     int64_t result;
     uint32_t shift;
@@ -176,12 +176,12 @@ static int wasm_is_prefix(uint8_t opcode)
     return opcode == 0xd0u || opcode == 0xfbu || opcode == 0xfcu || opcode == 0xfdu || opcode == 0xfeu;
 }
 
-static int wasm_record_mode_matches(const asmkit_wasm_td_record_t* record, asmkit_mode_t mode)
+static int wasm_record_mode_matches(const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record, asmkit_mode_t mode)
 {
     return record->mode64 == 0u || mode == ASMKIT_MODE_WASM64;
 }
 
-static int wasm_td_features_match(const asmkit_engine_t* engine, const asmkit_wasm_td_record_t* record)
+static int wasm_td_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -193,7 +193,7 @@ static int wasm_td_features_match(const asmkit_engine_t* engine, const asmkit_wa
     return 1;
 }
 
-static const asmkit_wasm_td_record_t* wasm_find_record(const asmkit_engine_t* engine, uint8_t prefix, uint32_t opcode, asmkit_mode_t mode, int* saw_feature_blocked_candidate)
+static const asmkit_wasm_td_record_t* wasm_find_record(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, uint8_t prefix, uint32_t opcode, asmkit_mode_t mode, int* ASMKIT_RESTRICT_WASM_SCRATCH saw_feature_blocked_candidate)
 {
     const asmkit_wasm_td_opcode_range_t* range;
     const asmkit_wasm_td_record_t* default_record;
@@ -228,7 +228,7 @@ static const asmkit_wasm_td_record_t* wasm_find_record(const asmkit_engine_t* en
     return default_record;
 }
 
-static int wasm_decode_operands(const asmkit_wasm_td_record_t* record, const uint8_t* code, size_t code_size, size_t* offset, asmkit_inst_t* out_inst)
+static int wasm_decode_operands(const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record, const uint8_t* ASMKIT_RESTRICT_WASM_CODE code, size_t code_size, size_t* ASMKIT_RESTRICT_WASM_SCRATCH offset, asmkit_inst_t* ASMKIT_RESTRICT_WASM_OUT out_inst)
 {
     uint8_t i;
 
@@ -315,7 +315,7 @@ static int wasm_decode_operands(const asmkit_wasm_td_record_t* record, const uin
     return 1;
 }
 
-asmkit_status_t asmkit_gen_wasm_decode_one(const asmkit_engine_t* engine, const uint8_t* code, size_t code_size, uint64_t address, asmkit_inst_t* out_inst)
+asmkit_status_t asmkit_gen_wasm_decode_one(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, const uint8_t* ASMKIT_RESTRICT_WASM_CODE code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT_WASM_OUT out_inst)
 {
     const asmkit_wasm_td_record_t* record;
     uint8_t prefix;

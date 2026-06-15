@@ -89,6 +89,8 @@ ctest --test-dir build -C Debug --output-on-failure
 | `ASMKIT_ENABLE_TEXT` | `OFF` | 编译可选助记符文本格式化表和代码。 |
 | `ASMKIT_FREESTANDING` | `ON` | 为公开目标定义 `ASMKIT_FREESTANDING=1`。 |
 | `ASMKIT_ENABLE_ASAN` | `OFF` | 对支持的编译器启用 AddressSanitizer。 |
+| `ASMKIT_ENABLE_TSAN` | `OFF` | 对支持的 Clang/GNU target 启用 ThreadSanitizer。 |
+| `ASMKIT_ENABLE_UBSAN` | `OFF` | 对支持的 Clang/GNU target 启用 UndefinedBehaviorSanitizer。 |
 | `ASMKIT_ENABLE_BENCHMARKS` | `OFF` | 构建 `tests/performance` 下的可选解码性能测试。 |
 
 ## 快速开始

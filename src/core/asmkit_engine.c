@@ -12,7 +12,7 @@ static asmkit_mode_t asmkit_default_mode_for_arch(asmkit_arch_t arch)
     }
 }
 
-static uint64_t* asmkit_engine_config_feature_word_ptr(asmkit_engine_config_t* config, uint32_t word_index)
+static uint64_t* asmkit_engine_config_feature_word_ptr(asmkit_engine_config_t* ASMKIT_RESTRICT config, uint32_t word_index)
 {
     switch (word_index) {
     case 0u: return &config->feature_bits_lo;
@@ -50,7 +50,7 @@ const asmkit_target_ops_t* asmkit_lookup_target_ops(asmkit_arch_t arch, asmkit_m
     return 0;
 }
 
-const asmkit_target_ops_t* asmkit_engine_ops(const asmkit_engine_t* engine)
+const asmkit_target_ops_t* asmkit_engine_ops(const asmkit_engine_t* ASMKIT_RESTRICT engine)
 {
     if (engine == 0 || engine->target_tables == 0) {
         return 0;
@@ -58,12 +58,12 @@ const asmkit_target_ops_t* asmkit_engine_ops(const asmkit_engine_t* engine)
     return (const asmkit_target_ops_t*)engine->target_tables;
 }
 
-int asmkit_target_feature_enabled(const asmkit_engine_t* engine, uint32_t feature_bit)
+int asmkit_target_feature_enabled(const asmkit_engine_t* ASMKIT_RESTRICT engine, uint32_t feature_bit)
 {
     return (asmkit_engine_feature_word(engine, feature_bit / 64u) & ((uint64_t)1u << (feature_bit % 64u))) != 0u;
 }
 
-uint64_t asmkit_engine_feature_word(const asmkit_engine_t* engine, uint32_t word_index)
+uint64_t asmkit_engine_feature_word(const asmkit_engine_t* ASMKIT_RESTRICT engine, uint32_t word_index)
 {
     if (engine == 0) {
         return 0u;

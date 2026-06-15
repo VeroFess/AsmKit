@@ -4,6 +4,7 @@
 #include "asmkit/target/bpf.h"
 #include "asmkit/target/x86.h"
 
+#if ASMKIT_ENABLE_TEXT
 static int asmkit_test_easy_cstr_eq(const char* left, const char* right)
 {
     uint32_t i;
@@ -17,6 +18,7 @@ static int asmkit_test_easy_cstr_eq(const char* left, const char* right)
     }
     return left[i] == right[i];
 }
+#endif
 
 int asmkit_test_easy_api(void)
 {

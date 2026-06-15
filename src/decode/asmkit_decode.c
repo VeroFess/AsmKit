@@ -1,6 +1,6 @@
 #include "core/asmkit_internal.h"
 
-static void asmkit_decode_apply_operand_metadata(asmkit_inst_t* inst)
+static void asmkit_decode_apply_operand_metadata(asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     const asmkit_operand_info_t* infos;
     uint32_t count;
@@ -52,12 +52,12 @@ static void asmkit_decode_apply_operand_metadata(asmkit_inst_t* inst)
 }
 
 asmkit_status_t asmkit_decode_one(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
-    const uint8_t* code,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const uint8_t* ASMKIT_RESTRICT code,
     size_t code_size,
     uint64_t address,
-    asmkit_inst_t* out_inst)
+    asmkit_inst_t* ASMKIT_RESTRICT out_inst)
 {
     const asmkit_target_ops_t* ops;
     asmkit_status_t status;
@@ -77,15 +77,15 @@ asmkit_status_t asmkit_decode_one(
 }
 
 asmkit_status_t asmkit_decode_block_until(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
-    const uint8_t* code,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const uint8_t* ASMKIT_RESTRICT code,
     size_t code_size,
     uint64_t address,
     uint32_t min_size,
-    asmkit_inst_t* out_insts,
+    asmkit_inst_t* ASMKIT_RESTRICT out_insts,
     uint32_t out_inst_capacity,
-    asmkit_decode_block_result_t* out_result)
+    asmkit_decode_block_result_t* ASMKIT_RESTRICT out_result)
 {
     uint32_t count;
     uint32_t total;

@@ -1,8 +1,8 @@
 #include "core/asmkit_internal.h"
 
 static int asmkit_emit_result_clobbers_allowed(
-    const asmkit_emit_options_t* options,
-    const asmkit_emit_result_t* result)
+    const asmkit_emit_options_t* ASMKIT_RESTRICT options,
+    const asmkit_emit_result_t* ASMKIT_RESTRICT result)
 {
     if (result == 0 || (result->clobber_mask_lo == 0u && result->clobber_mask_hi == 0u)) {
         return 1;
@@ -19,8 +19,8 @@ static int asmkit_emit_result_clobbers_allowed(
 
 static asmkit_status_t asmkit_emit_finish(
     asmkit_status_t status,
-    const asmkit_emit_options_t* options,
-    const asmkit_emit_result_t* result)
+    const asmkit_emit_options_t* ASMKIT_RESTRICT options,
+    const asmkit_emit_result_t* ASMKIT_RESTRICT result)
 {
     if (status != ASMKIT_OK) {
         return status;
@@ -29,13 +29,13 @@ static asmkit_status_t asmkit_emit_finish(
 }
 
 asmkit_status_t asmkit_encode_inst(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
-    const asmkit_inst_t* inst,
-    const asmkit_encode_options_t* options,
-    uint8_t* out_code,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const asmkit_inst_t* ASMKIT_RESTRICT inst,
+    const asmkit_encode_options_t* ASMKIT_RESTRICT options,
+    uint8_t* ASMKIT_RESTRICT out_code,
     size_t out_capacity,
-    asmkit_encode_result_t* out_result)
+    asmkit_encode_result_t* ASMKIT_RESTRICT out_result)
 {
     const asmkit_target_ops_t* ops;
 
@@ -50,14 +50,14 @@ asmkit_status_t asmkit_encode_inst(
 }
 
 asmkit_status_t asmkit_emit_jump(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
     uint64_t from_address,
     uint64_t to_address,
-    const asmkit_emit_options_t* options,
-    uint8_t* out_code,
+    const asmkit_emit_options_t* ASMKIT_RESTRICT options,
+    uint8_t* ASMKIT_RESTRICT out_code,
     size_t out_capacity,
-    asmkit_emit_result_t* out_result)
+    asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     const asmkit_target_ops_t* ops;
 
@@ -75,14 +75,14 @@ asmkit_status_t asmkit_emit_jump(
 }
 
 asmkit_status_t asmkit_emit_call(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
     uint64_t from_address,
     uint64_t to_address,
-    const asmkit_emit_options_t* options,
-    uint8_t* out_code,
+    const asmkit_emit_options_t* ASMKIT_RESTRICT options,
+    uint8_t* ASMKIT_RESTRICT out_code,
     size_t out_capacity,
-    asmkit_emit_result_t* out_result)
+    asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     const asmkit_target_ops_t* ops;
 

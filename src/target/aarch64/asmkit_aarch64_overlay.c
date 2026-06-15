@@ -2,17 +2,17 @@
 #include "asmkit_gen_aarch64_defs.h"
 #include "asmkit_gen_aarch64_mnemonics.h"
 
-static asmkit_mnemonic_id_t a64_inst_mnemonic(const asmkit_inst_t* inst);
-static int a64_is_address_materialization(const asmkit_inst_t* inst);
-static int a64_is_literal_pc_relative(const asmkit_inst_t* inst);
+static asmkit_mnemonic_id_t a64_inst_mnemonic(const asmkit_inst_t* ASMKIT_RESTRICT inst);
+static int a64_is_address_materialization(const asmkit_inst_t* ASMKIT_RESTRICT inst);
+static int a64_is_literal_pc_relative(const asmkit_inst_t* ASMKIT_RESTRICT inst);
 
-static asmkit_status_t a64_decode(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const uint8_t* code, size_t code_size, uint64_t address, asmkit_inst_t* out_inst)
+static asmkit_status_t a64_decode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const uint8_t* ASMKIT_RESTRICT code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT out_inst)
 {
     (void)workspace;
     return asmkit_gen_aarch64_decode_one(engine, code, code_size, address, out_inst);
 }
 
-static const asmkit_operand_t* a64_find_pc_rel_operand(const asmkit_inst_t* inst, uint8_t* out_index)
+static const asmkit_operand_t* a64_find_pc_rel_operand(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint8_t* ASMKIT_RESTRICT out_index)
 {
     uint8_t i;
     if (inst == 0) {
@@ -29,7 +29,7 @@ static const asmkit_operand_t* a64_find_pc_rel_operand(const asmkit_inst_t* inst
     return 0;
 }
 
-static uint64_t a64_operand_target(const asmkit_inst_t* inst, const asmkit_operand_t* operand)
+static uint64_t a64_operand_target(const asmkit_inst_t* ASMKIT_RESTRICT inst, const asmkit_operand_t* ASMKIT_RESTRICT operand)
 {
     if (operand == 0) {
         return 0u;
@@ -40,7 +40,7 @@ static uint64_t a64_operand_target(const asmkit_inst_t* inst, const asmkit_opera
     return inst->address + (uint64_t)operand->imm;
 }
 
-static asmkit_status_t a64_analyze(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, asmkit_inst_semantics_t* out_semantics)
+static asmkit_status_t a64_analyze(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, asmkit_inst_semantics_t* ASMKIT_RESTRICT out_semantics)
 {
     const asmkit_operand_t* pc_operand;
     uint64_t pc_target;
@@ -103,7 +103,7 @@ static asmkit_status_t a64_analyze(const asmkit_engine_t* engine, asmkit_workspa
     return ASMKIT_OK;
 }
 
-static asmkit_status_t a64_emit_abs(int is_call, uint64_t to_address, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_emit_abs(int is_call, uint64_t to_address, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     asmkit_zero(out_result, sizeof(*out_result));
     out_result->size = 16u;
@@ -117,7 +117,7 @@ static asmkit_status_t a64_emit_abs(int is_call, uint64_t to_address, uint8_t* o
     return ASMKIT_OK;
 }
 
-static asmkit_status_t a64_emit_any(const asmkit_engine_t* engine, int is_call, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_emit_any(const asmkit_engine_t* ASMKIT_RESTRICT engine, int is_call, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     asmkit_branch_mode_t mode;
     asmkit_status_t status;
@@ -142,19 +142,19 @@ static asmkit_status_t a64_emit_any(const asmkit_engine_t* engine, int is_call, 
     return a64_emit_abs(is_call, to_address, out_code, out_capacity, out_result);
 }
 
-static asmkit_status_t a64_emit_jump(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_emit_jump(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     return a64_emit_any(engine, 0, from_address, to_address, options, out_code, out_capacity, out_result);
 }
 
-static asmkit_status_t a64_emit_call(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_emit_call(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     return a64_emit_any(engine, 1, from_address, to_address, options, out_code, out_capacity, out_result);
 }
 
-static asmkit_mnemonic_id_t a64_inst_mnemonic(const asmkit_inst_t* inst)
+static asmkit_mnemonic_id_t a64_inst_mnemonic(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     if (inst == 0) {
         return ASMKIT_MNEMONIC_INVALID;
@@ -178,7 +178,7 @@ static asmkit_mnemonic_id_t a64_inst_mnemonic(const asmkit_inst_t* inst)
     }
 }
 
-static uint32_t a64_inst_word(const asmkit_inst_t* inst)
+static uint32_t a64_inst_word(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     return inst != 0 && inst->size >= 4u ? asmkit_load32le(inst->bytes) : 0u;
 }
@@ -223,12 +223,12 @@ static int a64_word_is_unconditional_b_bl(uint32_t word)
     return (word & 0xfc000000u) == 0x14000000u || (word & 0xfc000000u) == 0x94000000u;
 }
 
-static int a64_is_adrp(const asmkit_inst_t* inst)
+static int a64_is_adrp(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     return a64_inst_mnemonic(inst) == ASMKIT_GEN_AARCH64_MNEMONIC_ADRP_ID || a64_word_is_adrp(a64_inst_word(inst));
 }
 
-static int a64_is_address_materialization(const asmkit_inst_t* inst)
+static int a64_is_address_materialization(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     asmkit_mnemonic_id_t mnemonic;
     uint32_t word;
@@ -240,7 +240,7 @@ static int a64_is_address_materialization(const asmkit_inst_t* inst)
     return a64_word_is_adr(word) || a64_word_is_adrp(word);
 }
 
-static int a64_is_literal_pc_relative(const asmkit_inst_t* inst)
+static int a64_is_literal_pc_relative(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     uint32_t word;
     if (inst != 0 && (inst->flags & ASMKIT_INST_FLAG_LITERAL) != 0u) {
@@ -250,7 +250,7 @@ static int a64_is_literal_pc_relative(const asmkit_inst_t* inst)
     return a64_word_is_ldr_literal(word) || a64_word_is_prfm_literal(word);
 }
 
-static int a64_is_unconditional_pc_branch_or_call(const asmkit_inst_t* inst)
+static int a64_is_unconditional_pc_branch_or_call(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     asmkit_mnemonic_id_t mnemonic;
     if (inst == 0 || (inst->flags & ASMKIT_INST_FLAG_PC_RELATIVE) == 0u) {
@@ -264,19 +264,19 @@ static int a64_is_unconditional_pc_branch_or_call(const asmkit_inst_t* inst)
     return a64_word_is_unconditional_b_bl(a64_inst_word(inst));
 }
 
-static int a64_is_call(const asmkit_inst_t* inst)
+static int a64_is_call(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     return inst != 0 && (a64_inst_mnemonic(inst) == ASMKIT_GEN_AARCH64_MNEMONIC_BL_ID || inst->inst_class == ASMKIT_INST_DIRECT_CALL);
 }
 
-static uint64_t a64_branch_target(const asmkit_inst_t* inst)
+static uint64_t a64_branch_target(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     const asmkit_operand_t* operand;
     operand = a64_find_pc_rel_operand(inst, 0);
     return a64_operand_target(inst, operand);
 }
 
-static int a64_reg_encoding(const asmkit_operand_t* operand, uint16_t expected_width, uint32_t* out_encoding)
+static int a64_reg_encoding(const asmkit_operand_t* ASMKIT_RESTRICT operand, uint16_t expected_width, uint32_t* ASMKIT_RESTRICT out_encoding)
 {
     const asmkit_register_info_t* info;
     if (operand == 0 || out_encoding == 0 || operand->kind != ASMKIT_OP_REG) {
@@ -295,7 +295,7 @@ static int a64_reg_encoding(const asmkit_operand_t* operand, uint16_t expected_w
     return 0;
 }
 
-static asmkit_status_t a64_encode(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, const asmkit_encode_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+static asmkit_status_t a64_encode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, const asmkit_encode_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     (void)options;
@@ -356,7 +356,7 @@ static asmkit_status_t a64_encode(const asmkit_engine_t* engine, asmkit_workspac
     return asmkit_gen_aarch64_encode_inst(engine, inst, out_code, out_capacity, out_result);
 }
 
-static uint32_t a64_min_patch(const asmkit_engine_t* engine, uint64_t from_address, uint64_t to_address, asmkit_branch_mode_t mode, uint64_t* clobber_lo, uint64_t* clobber_hi)
+static uint32_t a64_min_patch(const asmkit_engine_t* ASMKIT_RESTRICT engine, uint64_t from_address, uint64_t to_address, asmkit_branch_mode_t mode, uint64_t* ASMKIT_RESTRICT clobber_lo, uint64_t* ASMKIT_RESTRICT clobber_hi)
 {
     int64_t disp;
     (void)engine;
@@ -379,7 +379,7 @@ static uint32_t a64_min_patch(const asmkit_engine_t* engine, uint64_t from_addre
     return 16u;
 }
 
-static asmkit_status_t a64_plan_jump_back(const asmkit_engine_t* engine, asmkit_branch_mode_t mode, asmkit_branch_plan_bound_t* out_bound)
+static asmkit_status_t a64_plan_jump_back(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_branch_mode_t mode, asmkit_branch_plan_bound_t* ASMKIT_RESTRICT out_bound)
 {
     (void)engine;
     if (out_bound == 0) {
@@ -398,7 +398,7 @@ static asmkit_status_t a64_plan_jump_back(const asmkit_engine_t* engine, asmkit_
     return ASMKIT_OK;
 }
 
-static int a64_is_conditional_pc_branch(const asmkit_inst_t* inst)
+static int a64_is_conditional_pc_branch(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     uint32_t word;
     if (inst == 0 || inst->inst_class != ASMKIT_INST_COND_BRANCH ||
@@ -409,7 +409,7 @@ static int a64_is_conditional_pc_branch(const asmkit_inst_t* inst)
     return a64_word_is_b_cond(word) || a64_word_is_cbz_cbnz(word) || a64_word_is_tbz_tbnz(word);
 }
 
-static uint32_t a64_invert_conditional_to_skip(const asmkit_inst_t* inst)
+static uint32_t a64_invert_conditional_to_skip(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     uint32_t word;
     word = asmkit_load32le(inst->bytes);
@@ -424,7 +424,7 @@ static uint32_t a64_invert_conditional_to_skip(const asmkit_inst_t* inst)
     return ((word & ~(0x3fffu << 5)) ^ 0x01000000u) | (5u << 5);
 }
 
-static asmkit_status_t a64_expand_conditional_abs(const asmkit_inst_t* inst, uint64_t target, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_expand_conditional_abs(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint64_t target, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     asmkit_emit_result_t abs_result;
     asmkit_status_t status;
@@ -445,7 +445,7 @@ static asmkit_status_t a64_expand_conditional_abs(const asmkit_inst_t* inst, uin
     return ASMKIT_OK;
 }
 
-static int64_t a64_range_min(const asmkit_inst_t* inst)
+static int64_t a64_range_min(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     uint32_t word;
     word = a64_inst_word(inst);
@@ -461,7 +461,7 @@ static int64_t a64_range_min(const asmkit_inst_t* inst)
     return -134217728;
 }
 
-static int64_t a64_range_max(const asmkit_inst_t* inst)
+static int64_t a64_range_max(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     uint32_t word;
     word = a64_inst_word(inst);
@@ -477,7 +477,7 @@ static int64_t a64_range_max(const asmkit_inst_t* inst)
     return 134217724;
 }
 
-static asmkit_status_t a64_relocate(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, uint64_t relocated_address, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t a64_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, uint64_t relocated_address, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     const asmkit_operand_t* pc_operand;
     uint32_t word;

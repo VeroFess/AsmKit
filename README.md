@@ -94,6 +94,8 @@ Common CMake options:
 | `ASMKIT_ENABLE_TEXT` | `OFF` | Compiles optional mnemonic text formatting tables and code. |
 | `ASMKIT_FREESTANDING` | `ON` | Defines `ASMKIT_FREESTANDING=1` for the public target. |
 | `ASMKIT_ENABLE_ASAN` | `OFF` | Enables AddressSanitizer for supported compilers. |
+| `ASMKIT_ENABLE_TSAN` | `OFF` | Enables ThreadSanitizer for supported Clang/GNU targets. |
+| `ASMKIT_ENABLE_UBSAN` | `OFF` | Enables UndefinedBehaviorSanitizer for supported Clang/GNU targets. |
 | `ASMKIT_ENABLE_BENCHMARKS` | `OFF` | Builds optional decode performance tests under `tests/performance`. |
 
 ## Quick start

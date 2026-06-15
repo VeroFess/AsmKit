@@ -1,10 +1,10 @@
 #include "core/asmkit_internal.h"
 
 asmkit_status_t asmkit_analyze_inst(
-    const asmkit_engine_t* engine,
-    asmkit_workspace_t* workspace,
-    const asmkit_inst_t* inst,
-    asmkit_inst_semantics_t* out_semantics)
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const asmkit_inst_t* ASMKIT_RESTRICT inst,
+    asmkit_inst_semantics_t* ASMKIT_RESTRICT out_semantics)
 {
     const asmkit_target_ops_t* ops;
 

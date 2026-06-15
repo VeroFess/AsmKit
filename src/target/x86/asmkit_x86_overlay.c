@@ -2,15 +2,15 @@
 #include "asmkit_gen_x86_defs.h"
 #include "asmkit_gen_x86_mnemonics.h"
 
-static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* inst, uint8_t* out_index);
+static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint8_t* ASMKIT_RESTRICT out_index);
 
-static asmkit_status_t x86_decode(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const uint8_t* code, size_t code_size, uint64_t address, asmkit_inst_t* out_inst)
+static asmkit_status_t x86_decode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const uint8_t* ASMKIT_RESTRICT code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT out_inst)
 {
     (void)workspace;
     return asmkit_gen_x86_decode_one(engine, code, code_size, address, out_inst);
 }
 
-static int x86_find_opcode(const asmkit_inst_t* inst, uint32_t* opcode_offset)
+static int x86_find_opcode(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint32_t* ASMKIT_RESTRICT opcode_offset)
 {
     uint32_t i;
     i = 0u;
@@ -30,7 +30,7 @@ static int x86_find_opcode(const asmkit_inst_t* inst, uint32_t* opcode_offset)
     return 0;
 }
 
-static int x86_find_rip_disp(const asmkit_inst_t* inst, uint32_t* disp_offset)
+static int x86_find_rip_disp(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint32_t* ASMKIT_RESTRICT disp_offset)
 {
     uint32_t i;
     uint8_t op;
@@ -61,7 +61,7 @@ static int x86_find_rip_disp(const asmkit_inst_t* inst, uint32_t* disp_offset)
     return 0;
 }
 
-static void x86_set_branch_limits(asmkit_branch_info_t* branch, uint16_t width)
+static void x86_set_branch_limits(asmkit_branch_info_t* ASMKIT_RESTRICT branch, uint16_t width)
 {
     if (width == 8u) {
         branch->min_disp = -128;
@@ -75,7 +75,7 @@ static void x86_set_branch_limits(asmkit_branch_info_t* branch, uint16_t width)
     }
 }
 
-static asmkit_status_t x86_analyze(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, asmkit_inst_semantics_t* out_semantics)
+static asmkit_status_t x86_analyze(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, asmkit_inst_semantics_t* ASMKIT_RESTRICT out_semantics)
 {
     (void)engine;
     (void)workspace;
@@ -135,7 +135,7 @@ static asmkit_status_t x86_analyze(const asmkit_engine_t* engine, asmkit_workspa
     return ASMKIT_OK;
 }
 
-static asmkit_status_t x86_emit_abs(const asmkit_engine_t* engine, int is_call, uint64_t to_address, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t x86_emit_abs(const asmkit_engine_t* ASMKIT_RESTRICT engine, int is_call, uint64_t to_address, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)engine;
     asmkit_zero(out_result, sizeof(*out_result));
@@ -151,14 +151,14 @@ static asmkit_status_t x86_emit_abs(const asmkit_engine_t* engine, int is_call, 
 }
 
 static asmkit_status_t x86_emit_any(
-    const asmkit_engine_t* engine,
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
     int is_call,
     uint64_t from_address,
     uint64_t to_address,
-    const asmkit_emit_options_t* options,
-    uint8_t* out_code,
+    const asmkit_emit_options_t* ASMKIT_RESTRICT options,
+    uint8_t* ASMKIT_RESTRICT out_code,
     size_t out_capacity,
-    asmkit_emit_result_t* out_result)
+    asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     asmkit_branch_mode_t mode;
     asmkit_status_t status;
@@ -176,26 +176,26 @@ static asmkit_status_t x86_emit_any(
     return x86_emit_abs(engine, is_call, to_address, out_code, out_capacity, out_result);
 }
 
-static asmkit_status_t x86_emit_jump(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t x86_emit_jump(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     return x86_emit_any(engine, 0, from_address, to_address, options, out_code, out_capacity, out_result);
 }
 
-static asmkit_status_t x86_emit_call(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t x86_emit_call(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, uint64_t from_address, uint64_t to_address, const asmkit_emit_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     return x86_emit_any(engine, 1, from_address, to_address, options, out_code, out_capacity, out_result);
 }
 
-static void x86_encode_from_emit_result(const asmkit_emit_result_t* emit_result, asmkit_encode_result_t* out_result)
+static void x86_encode_from_emit_result(const asmkit_emit_result_t* ASMKIT_RESTRICT emit_result, asmkit_encode_result_t* ASMKIT_RESTRICT out_result)
 {
     asmkit_zero(out_result, sizeof(*out_result));
     out_result->size = emit_result->size;
     out_result->flags = emit_result->flags;
 }
 
-static asmkit_mnemonic_id_t x86_inst_mnemonic(const asmkit_inst_t* inst)
+static asmkit_mnemonic_id_t x86_inst_mnemonic(const asmkit_inst_t* ASMKIT_RESTRICT inst)
 {
     if (inst->mnemonic_id != ASMKIT_MNEMONIC_INVALID) {
         return inst->mnemonic_id;
@@ -216,7 +216,7 @@ static asmkit_mnemonic_id_t x86_inst_mnemonic(const asmkit_inst_t* inst)
     }
 }
 
-static uint64_t x86_branch_target(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint32_t direct_size)
+static uint64_t x86_branch_target(const asmkit_engine_t* ASMKIT_RESTRICT engine, const asmkit_inst_t* ASMKIT_RESTRICT inst, uint32_t direct_size)
 {
     const asmkit_operand_t* operand;
     (void)engine;
@@ -227,7 +227,7 @@ static uint64_t x86_branch_target(const asmkit_engine_t* engine, const asmkit_in
     return inst->address + (uint64_t)direct_size + (uint64_t)operand->imm;
 }
 
-static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* inst, uint8_t* out_index)
+static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint8_t* ASMKIT_RESTRICT out_index)
 {
     uint8_t i;
     for (i = 0u; i < inst->operand_count && i < ASMKIT_MAX_OPERANDS; ++i) {
@@ -245,7 +245,7 @@ static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* inst, uin
     return 0;
 }
 
-static asmkit_status_t x86_encode(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, const asmkit_encode_options_t* options, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+static asmkit_status_t x86_encode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, const asmkit_encode_options_t* ASMKIT_RESTRICT options, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT out_result)
 {
     (void)workspace;
     (void)options;
@@ -298,7 +298,7 @@ static asmkit_status_t x86_encode(const asmkit_engine_t* engine, asmkit_workspac
     return asmkit_gen_x86_encode_inst(engine, inst, out_code, out_capacity, out_result);
 }
 
-static uint32_t x86_min_patch(const asmkit_engine_t* engine, uint64_t from_address, uint64_t to_address, asmkit_branch_mode_t mode, uint64_t* clobber_lo, uint64_t* clobber_hi)
+static uint32_t x86_min_patch(const asmkit_engine_t* ASMKIT_RESTRICT engine, uint64_t from_address, uint64_t to_address, asmkit_branch_mode_t mode, uint64_t* ASMKIT_RESTRICT clobber_lo, uint64_t* ASMKIT_RESTRICT clobber_hi)
 {
     uint32_t direct_size;
     int64_t disp;
@@ -321,7 +321,7 @@ static uint32_t x86_min_patch(const asmkit_engine_t* engine, uint64_t from_addre
     return engine->config.mode == ASMKIT_MODE_X86_64 ? 14u : 0u;
 }
 
-static asmkit_status_t x86_plan_jump_back(const asmkit_engine_t* engine, asmkit_branch_mode_t mode, asmkit_branch_plan_bound_t* out_bound)
+static asmkit_status_t x86_plan_jump_back(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_branch_mode_t mode, asmkit_branch_plan_bound_t* ASMKIT_RESTRICT out_bound)
 {
     uint32_t direct_size;
 
@@ -349,7 +349,7 @@ static asmkit_status_t x86_plan_jump_back(const asmkit_engine_t* engine, asmkit_
     return ASMKIT_OK;
 }
 
-static asmkit_status_t x86_emit_jcc(uint8_t cc, uint64_t from, uint64_t to, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t x86_emit_jcc(uint8_t cc, uint64_t from, uint64_t to, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     int64_t disp;
     asmkit_zero(out_result, sizeof(*out_result));
@@ -367,7 +367,7 @@ static asmkit_status_t x86_emit_jcc(uint8_t cc, uint64_t from, uint64_t to, uint
     return ASMKIT_OK;
 }
 
-static asmkit_status_t x86_relocate(const asmkit_engine_t* engine, asmkit_workspace_t* workspace, const asmkit_inst_t* inst, uint64_t relocated_address, uint8_t* out_code, size_t out_capacity, asmkit_emit_result_t* out_result)
+static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, uint64_t relocated_address, uint8_t* ASMKIT_RESTRICT out_code, size_t out_capacity, asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
 {
     uint32_t op_off;
     uint32_t disp_off;

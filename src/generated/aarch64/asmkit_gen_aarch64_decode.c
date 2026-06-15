@@ -243,7 +243,7 @@ static const asmkit_a64_td_bucket_range_t* a64_td_fallback_bucket(uint32_t word)
     return 0;
 }
 
-static const asmkit_a64_td_bucket_range_t* a64_td_subbucket(uint32_t word, const asmkit_a64_td_subbucket_desc_t* desc)
+static const asmkit_a64_td_bucket_range_t* a64_td_subbucket(uint32_t word, const asmkit_a64_td_subbucket_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc)
 {
     uint32_t key;
     uint32_t lo;
@@ -333,7 +333,7 @@ static uint64_t a64_replicate_width(uint64_t value, unsigned element_width, unsi
     return reg_width >= 64u ? result : (result & a64_ones(reg_width));
 }
 
-static int a64_decode_logical_imm(uint32_t encoded, uint16_t reg_width, uint64_t* out_value)
+static int a64_decode_logical_imm(uint32_t encoded, uint16_t reg_width, uint64_t* ASMKIT_RESTRICT_AARCH64_SCRATCH out_value)
 {
     uint32_t n;
     uint32_t immr;
@@ -460,7 +460,7 @@ static uint32_t a64_td_vector_id(uint32_t encoding, uint16_t width, uint8_t reg3
     return a64_td_gpr_id(encoding, width, reg31_is_sp);
 }
 
-static int a64_td_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* desc, asmkit_operand_t* out_operand)
+static int a64_td_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc, asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_OUT out_operand)
 {
     uint32_t encoding;
     uint32_t reg_id;
@@ -509,7 +509,7 @@ static int a64_td_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t
     return 1;
 }
 
-static int a64_td_shifted_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* desc, asmkit_operand_t* out_operand)
+static int a64_td_shifted_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc, asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_OUT out_operand)
 {
     uint32_t amount;
     uint32_t shift_type;
@@ -531,7 +531,7 @@ static int a64_td_shifted_reg_operand(uint32_t value, const asmkit_a64_td_operan
     return 1;
 }
 
-static int a64_td_extended_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* desc, asmkit_operand_t* out_operand)
+static int a64_td_extended_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc, asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_OUT out_operand)
 {
     uint32_t amount;
     uint32_t extend;
@@ -560,7 +560,7 @@ static int a64_td_extended_reg_operand(uint32_t value, const asmkit_a64_td_opera
     return 1;
 }
 
-static int a64_td_decode_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* desc, asmkit_operand_t* out_operand)
+static int a64_td_decode_reg_operand(uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc, asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_OUT out_operand)
 {
     if (desc->transform == ASMKIT_A64_TD_TRANSFORM_ARITH_SHIFTED_REG || desc->transform == ASMKIT_A64_TD_TRANSFORM_LOGICAL_SHIFTED_REG) {
         return a64_td_shifted_reg_operand(value, desc, out_operand);
@@ -571,7 +571,7 @@ static int a64_td_decode_reg_operand(uint32_t value, const asmkit_a64_td_operand
     return a64_td_reg_operand(value, desc, out_operand);
 }
 
-static int a64_td_imm_value(uint32_t value, const asmkit_a64_td_operand_desc_t* desc, int64_t* out_value)
+static int a64_td_imm_value(uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc, int64_t* ASMKIT_RESTRICT_AARCH64_SCRATCH out_value)
 {
     uint64_t logical_value;
     unsigned width;
@@ -645,7 +645,7 @@ static int a64_td_imm_value(uint32_t value, const asmkit_a64_td_operand_desc_t* 
     }
 }
 
-static asmkit_operand_t a64_td_pc_rel_operand(uint64_t address, uint32_t value, const asmkit_a64_td_operand_desc_t* desc)
+static asmkit_operand_t a64_td_pc_rel_operand(uint64_t address, uint32_t value, const asmkit_a64_td_operand_desc_t* ASMKIT_RESTRICT_AARCH64_CONST desc)
 {
     asmkit_operand_t operand;
     unsigned width;
@@ -658,13 +658,13 @@ static asmkit_operand_t a64_td_pc_rel_operand(uint64_t address, uint32_t value, 
     base = address;
     switch (desc->transform) {
     case ASMKIT_A64_TD_TRANSFORM_PC_REL_WORDS4:
-        disp = a64_sign_extend(value, width) << 2;
+        disp = a64_sign_extend(value, width) * INT64_C(4);
         break;
     case ASMKIT_A64_TD_TRANSFORM_PC_REL_ADR:
         disp = a64_sign_extend(value, width);
         break;
     case ASMKIT_A64_TD_TRANSFORM_PC_REL_ADRP:
-        disp = a64_sign_extend(value, width) << 12;
+        disp = a64_sign_extend(value, width) * INT64_C(4096);
         base = address & ~(uint64_t)0xfffu;
         break;
     default:
@@ -675,7 +675,7 @@ static asmkit_operand_t a64_td_pc_rel_operand(uint64_t address, uint32_t value, 
     return operand;
 }
 
-static int a64_td_operand_values(const asmkit_a64_td_record_t* record, uint32_t word, uint32_t values[ASMKIT_MAX_OPERANDS])
+static int a64_td_operand_values(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record, uint32_t word, uint32_t values[ASMKIT_MAX_OPERANDS])
 {
     uint32_t i;
     if (record->operand_count > ASMKIT_MAX_OPERANDS) {
@@ -706,7 +706,7 @@ static int a64_td_operand_values(const asmkit_a64_td_record_t* record, uint32_t 
     return 1;
 }
 
-static int a64_td_record_operands_match(const asmkit_a64_td_record_t* record, uint32_t word)
+static int a64_td_record_operands_match(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record, uint32_t word)
 {
     uint32_t values[ASMKIT_MAX_OPERANDS];
     uint32_t i;
@@ -732,7 +732,7 @@ static int a64_td_record_operands_match(const asmkit_a64_td_record_t* record, ui
     return 1;
 }
 
-static int a64_decode_td_operands(const asmkit_a64_td_record_t* record, uint32_t word, uint64_t address, asmkit_inst_t* out_inst)
+static int a64_decode_td_operands(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record, uint32_t word, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT out_inst)
 {
     uint32_t values[ASMKIT_MAX_OPERANDS];
     uint32_t i;
@@ -816,7 +816,7 @@ static asmkit_mnemonic_id_t a64_mnemonic_id(uint32_t id)
     }
 }
 
-static int a64_td_features_match(const asmkit_engine_t* engine, const asmkit_a64_td_record_t* record)
+static int a64_td_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine, const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -828,7 +828,7 @@ static int a64_td_features_match(const asmkit_engine_t* engine, const asmkit_a64
     return 1;
 }
 
-static int a64_pstate_literal_features_match(const asmkit_engine_t* engine, const asmkit_a64_pstate_literal_t* literal)
+static int a64_pstate_literal_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine, const asmkit_a64_pstate_literal_t* ASMKIT_RESTRICT_AARCH64_CONST literal)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -845,7 +845,7 @@ static int a64_is_invalid_pstate(uint32_t op1, uint32_t op2)
     return op1 == 0u && (op2 == 0u || op2 == 1u || op2 == 2u);
 }
 
-static int a64_pstate_literal_match(const asmkit_engine_t* engine, uint8_t kind, uint32_t encoding)
+static int a64_pstate_literal_match(const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine, uint8_t kind, uint32_t encoding)
 {
     size_t i;
     for (i = 0u; i < ASMKIT_ARRAY_COUNT(asmkit_a64_pstate_literals); ++i) {
@@ -857,7 +857,7 @@ static int a64_pstate_literal_match(const asmkit_engine_t* engine, uint8_t kind,
     return 0;
 }
 
-static int a64_td_predicate_match(const asmkit_engine_t* engine, const asmkit_a64_td_record_t* record, uint32_t word)
+static int a64_td_predicate_match(const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine, const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record, uint32_t word)
 {
     uint32_t op1;
     uint32_t op2;
@@ -884,15 +884,15 @@ static int a64_td_predicate_match(const asmkit_engine_t* engine, const asmkit_a6
 }
 
 static void a64_consider_td_record(
-    const asmkit_engine_t* engine,
+    const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine,
     uint32_t word,
     int check_features,
-    const asmkit_a64_td_record_t* record,
+    const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record,
     uint32_t record_index,
-    const asmkit_a64_td_record_t** best_record,
-    uint32_t* best_index,
-    uint8_t* best_fixed_bits,
-    int* have_match)
+    const asmkit_a64_td_record_t** ASMKIT_RESTRICT_AARCH64_SCRATCH best_record,
+    uint32_t* ASMKIT_RESTRICT_AARCH64_SCRATCH best_index,
+    uint8_t* ASMKIT_RESTRICT_AARCH64_SCRATCH best_fixed_bits,
+    int* ASMKIT_RESTRICT_AARCH64_SCRATCH have_match)
 {
     if ((word & record->mask) != record->value) {
         return;
@@ -915,17 +915,17 @@ static void a64_consider_td_record(
 }
 
 static void a64_consider_td_indexed_bucket(
-    const asmkit_engine_t* engine,
+    const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine,
     uint32_t word,
     int check_features,
-    const asmkit_a64_td_subbucket_desc_t* subdesc,
-    const uint32_t* base_indices,
+    const asmkit_a64_td_subbucket_desc_t* ASMKIT_RESTRICT_AARCH64_CONST subdesc,
+    const uint32_t* ASMKIT_RESTRICT_AARCH64_CODE base_indices,
     uint32_t first,
     uint32_t count,
-    const asmkit_a64_td_record_t** best_record,
-    uint32_t* best_index,
-    uint8_t* best_fixed_bits,
-    int* have_match)
+    const asmkit_a64_td_record_t** ASMKIT_RESTRICT_AARCH64_SCRATCH best_record,
+    uint32_t* ASMKIT_RESTRICT_AARCH64_SCRATCH best_index,
+    uint8_t* ASMKIT_RESTRICT_AARCH64_SCRATCH best_fixed_bits,
+    int* ASMKIT_RESTRICT_AARCH64_SCRATCH have_match)
 {
     const asmkit_a64_td_bucket_range_t* subbucket;
     uint32_t end;
@@ -956,7 +956,7 @@ static void a64_consider_td_indexed_bucket(
     }
 }
 
-static const asmkit_a64_td_record_t* a64_find_td_record(const asmkit_engine_t* engine, uint32_t word, int check_features)
+static const asmkit_a64_td_record_t* a64_find_td_record(const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine, uint32_t word, int check_features)
 {
     const asmkit_a64_td_bucket_range_t* bucket;
     const asmkit_a64_td_record_t* best_record = 0;
@@ -979,10 +979,10 @@ static const asmkit_a64_td_record_t* a64_find_td_record(const asmkit_engine_t* e
 }
 
 static asmkit_status_t a64_finish(
-    const asmkit_engine_t* engine,
-    const uint8_t* code,
+    const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine,
+    const uint8_t* ASMKIT_RESTRICT_AARCH64_CODE code,
     uint64_t address,
-    asmkit_inst_t* out_inst,
+    asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT out_inst,
     uint32_t id,
     asmkit_inst_class_t inst_class,
     uint32_t flags)
@@ -1000,7 +1000,7 @@ static asmkit_status_t a64_finish(
     return ASMKIT_OK;
 }
 
-static int a64_operand_is_gpr64_base(const asmkit_operand_t* operand)
+static int a64_operand_is_gpr64_base(const asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_CONST operand)
 {
     uint64_t reg;
     if (operand == 0 || operand->kind != ASMKIT_OP_REG || operand->width != 64u) {
@@ -1010,7 +1010,7 @@ static int a64_operand_is_gpr64_base(const asmkit_operand_t* operand)
     return (reg >= ASMKIT_AARCH64_REG_X0 && reg <= ASMKIT_AARCH64_REG_X28) || reg == ASMKIT_AARCH64_REG_FP || reg == ASMKIT_AARCH64_REG_LR || reg == ASMKIT_AARCH64_REG_SP;
 }
 
-static uint16_t a64_memory_access_width(uint32_t word, const asmkit_operand_t* data_operand)
+static uint16_t a64_memory_access_width(uint32_t word, const asmkit_operand_t* ASMKIT_RESTRICT_AARCH64_CONST data_operand)
 {
     uint16_t width;
     width = (uint16_t)(8u << ((word >> 30u) & 3u));
@@ -1020,7 +1020,7 @@ static uint16_t a64_memory_access_width(uint32_t word, const asmkit_operand_t* d
     return width;
 }
 
-static void a64_remove_operands(asmkit_inst_t* inst, uint8_t first, uint8_t count)
+static void a64_remove_operands(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t first, uint8_t count)
 {
     uint8_t old_count;
     uint8_t new_count;
@@ -1044,7 +1044,7 @@ static void a64_remove_operands(asmkit_inst_t* inst, uint8_t first, uint8_t coun
     inst->operand_count = new_count;
 }
 
-static void a64_replace_base_disp_memory(asmkit_inst_t* inst, uint8_t base_index, uint8_t disp_index, uint32_t word, uint32_t flags)
+static void a64_replace_base_disp_memory(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t base_index, uint8_t disp_index, uint32_t word, uint32_t flags)
 {
     asmkit_operand_t mem;
     if (base_index >= inst->operand_count || disp_index >= inst->operand_count) {
@@ -1060,7 +1060,7 @@ static void a64_replace_base_disp_memory(asmkit_inst_t* inst, uint8_t base_index
     a64_remove_operands(inst, disp_index, 1u);
 }
 
-static void a64_replace_base_index_memory(asmkit_inst_t* inst, uint8_t base_index, uint8_t index_index, uint8_t option_index, uint32_t word, uint32_t flags)
+static void a64_replace_base_index_memory(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t base_index, uint8_t index_index, uint8_t option_index, uint32_t word, uint32_t flags)
 {
     asmkit_operand_t mem;
     uint8_t scale;
@@ -1083,7 +1083,7 @@ static void a64_replace_base_index_memory(asmkit_inst_t* inst, uint8_t base_inde
     a64_remove_operands(inst, index_index, 2u);
 }
 
-static void a64_replace_base_index_fixed_scale_memory(asmkit_inst_t* inst, uint8_t base_index, uint8_t index_index, uint8_t scale, uint16_t width, uint32_t flags)
+static void a64_replace_base_index_fixed_scale_memory(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t base_index, uint8_t index_index, uint8_t scale, uint16_t width, uint32_t flags)
 {
     asmkit_operand_t mem;
     if (base_index >= inst->operand_count || index_index >= inst->operand_count) {
@@ -1099,7 +1099,7 @@ static void a64_replace_base_index_fixed_scale_memory(asmkit_inst_t* inst, uint8
     a64_remove_operands(inst, index_index, 1u);
 }
 
-static void a64_replace_base_only_memory(asmkit_inst_t* inst, uint8_t base_index, uint32_t word, uint32_t flags)
+static void a64_replace_base_only_memory(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t base_index, uint32_t word, uint32_t flags)
 {
     asmkit_operand_t mem;
     if (base_index >= inst->operand_count || !a64_operand_is_gpr64_base(&inst->operands[base_index])) {
@@ -1176,7 +1176,7 @@ static int a64_record_has_writeback_base_first(uint32_t id)
     }
 }
 
-static void a64_replace_writeback_base_disp_memory(asmkit_inst_t* inst, uint8_t base_index, uint8_t data_index, uint8_t disp_index, uint32_t word, uint32_t flags)
+static void a64_replace_writeback_base_disp_memory(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t base_index, uint8_t data_index, uint8_t disp_index, uint32_t word, uint32_t flags)
 {
     asmkit_operand_t data;
     asmkit_operand_t mem;
@@ -1200,12 +1200,12 @@ static void a64_replace_writeback_base_disp_memory(asmkit_inst_t* inst, uint8_t 
     inst->operand_count = 2u;
 }
 
-static int a64_record_is_prefetch_memory(const asmkit_a64_td_record_t* record)
+static int a64_record_is_prefetch_memory(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record)
 {
     return record->mnemonic_id == ASMKIT_GEN_AARCH64_MNEMONIC_PRFM_ID || record->mnemonic_id == ASMKIT_GEN_AARCH64_MNEMONIC_PRFUM_ID;
 }
 
-static uint8_t a64_sve_gather_index_scale(const asmkit_a64_td_record_t* record)
+static uint8_t a64_sve_gather_index_scale(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record)
 {
     if (record->mnemonic_id == ASMKIT_GEN_AARCH64_MNEMONIC_LDFF1H_ID) {
         return 2u;
@@ -1213,7 +1213,7 @@ static uint8_t a64_sve_gather_index_scale(const asmkit_a64_td_record_t* record)
     return 1u;
 }
 
-static void a64_fold_td_memory_operands(const asmkit_a64_td_record_t* record, uint32_t word, asmkit_inst_t* inst)
+static void a64_fold_td_memory_operands(const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record, uint32_t word, asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst)
 {
     uint32_t load_flags = ASMKIT_OPERAND_FLAG_EXPLICIT | ASMKIT_OPERAND_FLAG_MEMORY | ASMKIT_OPERAND_FLAG_READ;
     uint32_t store_flags = ASMKIT_OPERAND_FLAG_EXPLICIT | ASMKIT_OPERAND_FLAG_MEMORY | ASMKIT_OPERAND_FLAG_WRITE;
@@ -1259,11 +1259,11 @@ static void a64_fold_td_memory_operands(const asmkit_a64_td_record_t* record, ui
 }
 
 static asmkit_status_t a64_finish_td(
-    const asmkit_engine_t* engine,
-    const uint8_t* code,
+    const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine,
+    const uint8_t* ASMKIT_RESTRICT_AARCH64_CODE code,
     uint64_t address,
-    asmkit_inst_t* out_inst,
-    const asmkit_a64_td_record_t* record)
+    asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT out_inst,
+    const asmkit_a64_td_record_t* ASMKIT_RESTRICT_AARCH64_CONST record)
 {
     uint32_t word;
     asmkit_zero(out_inst, sizeof(*out_inst));
@@ -1284,7 +1284,7 @@ static asmkit_status_t a64_finish_td(
     return ASMKIT_OK;
 }
 
-static void a64_set_reg_operand(asmkit_inst_t* inst, uint8_t index, uint32_t reg, uint16_t width)
+static void a64_set_reg_operand(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t index, uint32_t reg, uint16_t width)
 {
     if (index >= ASMKIT_MAX_OPERANDS) {
         return;
@@ -1297,7 +1297,7 @@ static void a64_set_reg_operand(asmkit_inst_t* inst, uint8_t index, uint32_t reg
     }
 }
 
-static void a64_set_imm_operand(asmkit_inst_t* inst, uint8_t index, int64_t imm, uint16_t width)
+static void a64_set_imm_operand(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t index, int64_t imm, uint16_t width)
 {
     if (index >= ASMKIT_MAX_OPERANDS) {
         return;
@@ -1310,7 +1310,7 @@ static void a64_set_imm_operand(asmkit_inst_t* inst, uint8_t index, int64_t imm,
     }
 }
 
-static void a64_set_opaque_operand(asmkit_inst_t* inst, uint8_t index, uint64_t value, uint16_t width)
+static void a64_set_opaque_operand(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t index, uint64_t value, uint16_t width)
 {
     if (index >= ASMKIT_MAX_OPERANDS) {
         return;
@@ -1322,7 +1322,7 @@ static void a64_set_opaque_operand(asmkit_inst_t* inst, uint8_t index, uint64_t 
     }
 }
 
-static void a64_set_pc_operand(asmkit_inst_t* inst, uint8_t index, int64_t disp, uint64_t target, uint8_t width)
+static void a64_set_pc_operand(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint8_t index, int64_t disp, uint64_t target, uint8_t width)
 {
     if (index >= ASMKIT_MAX_OPERANDS) {
         return;
@@ -1336,7 +1336,7 @@ static void a64_set_pc_operand(asmkit_inst_t* inst, uint8_t index, int64_t disp,
     }
 }
 
-static void a64_set_literal_rt_operand(asmkit_inst_t* inst, uint32_t word)
+static void a64_set_literal_rt_operand(asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT inst, uint32_t word)
 {
     uint32_t rt;
     uint32_t opc;
@@ -1352,11 +1352,11 @@ static void a64_set_literal_rt_operand(asmkit_inst_t* inst, uint32_t word)
 }
 
 asmkit_status_t asmkit_gen_aarch64_decode_one(
-    const asmkit_engine_t* engine,
-    const uint8_t* code,
+    const asmkit_engine_t* ASMKIT_RESTRICT_AARCH64_CONST engine,
+    const uint8_t* ASMKIT_RESTRICT_AARCH64_CODE code,
     size_t code_size,
     uint64_t address,
-    asmkit_inst_t* out_inst)
+    asmkit_inst_t* ASMKIT_RESTRICT_AARCH64_OUT out_inst)
 {
     const asmkit_a64_td_record_t* td_record;
     uint32_t w;
@@ -1390,21 +1390,21 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
     }
 
     if ((w & 0xfc000000u) == 0x14000000u) {
-        disp = a64_sign_extend(w & 0x03ffffffu, 26u) << 2;
+        disp = a64_sign_extend(w & 0x03ffffffu, 26u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_B, ASMKIT_INST_DIRECT_BRANCH,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_TERMINATOR);
         a64_set_pc_operand(out_inst, 0u, disp, address + (uint64_t)disp, 26u);
         return ASMKIT_OK;
     }
     if ((w & 0xfc000000u) == 0x94000000u) {
-        disp = a64_sign_extend(w & 0x03ffffffu, 26u) << 2;
+        disp = a64_sign_extend(w & 0x03ffffffu, 26u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_BL, ASMKIT_INST_DIRECT_CALL,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CALL);
         a64_set_pc_operand(out_inst, 0u, disp, address + (uint64_t)disp, 26u);
         return ASMKIT_OK;
     }
     if ((w & 0xff000010u) == 0x54000000u) {
-        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) << 2;
+        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_B_COND, ASMKIT_INST_COND_BRANCH,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_DIRECT | ASMKIT_INST_FLAG_CONDITIONAL);
         a64_set_imm_operand(out_inst, 0u, w & 0x0fu, 4u);
@@ -1412,7 +1412,7 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
         return ASMKIT_OK;
     }
     if ((w & 0x7e000000u) == 0x34000000u) {
-        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) << 2;
+        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst,
             ((w & 0x01000000u) != 0u) ? ASMKIT_A64_CBNZ : ASMKIT_A64_CBZ,
             ASMKIT_INST_COND_BRANCH,
@@ -1422,7 +1422,7 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
         return ASMKIT_OK;
     }
     if ((w & 0x7e000000u) == 0x36000000u) {
-        disp = a64_sign_extend((w >> 5) & 0x3fffu, 14u) << 2;
+        disp = a64_sign_extend((w >> 5) & 0x3fffu, 14u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst,
             ((w & 0x01000000u) != 0u) ? ASMKIT_A64_TBNZ : ASMKIT_A64_TBZ,
             ASMKIT_INST_COND_BRANCH,
@@ -1440,7 +1440,8 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
             page = address & ~(uint64_t)0xfffu;
             (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_ADRP, ASMKIT_INST_ALU, ASMKIT_INST_FLAG_PC_RELATIVE);
             a64_set_reg_operand(out_inst, 0u, a64_td_gpr_id(w & 0x1fu, 64u, 0u), 64u);
-            a64_set_pc_operand(out_inst, 1u, disp << 12, page + (uint64_t)(disp << 12), 21u);
+            disp *= INT64_C(4096);
+            a64_set_pc_operand(out_inst, 1u, disp, page + (uint64_t)disp, 21u);
         } else {
             (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_ADR, ASMKIT_INST_ALU, ASMKIT_INST_FLAG_PC_RELATIVE);
             a64_set_reg_operand(out_inst, 0u, a64_td_gpr_id(w & 0x1fu, 64u, 0u), 64u);
@@ -1449,7 +1450,7 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
         return ASMKIT_OK;
     }
     if ((w & 0x3b000000u) == 0x18000000u) {
-        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) << 2;
+        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_LDR_LITERAL, ASMKIT_INST_LOAD,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_LITERAL);
         a64_set_literal_rt_operand(out_inst, w);
@@ -1457,7 +1458,7 @@ asmkit_status_t asmkit_gen_aarch64_decode_one(
         return ASMKIT_OK;
     }
     if ((w & 0xff000000u) == 0xd8000000u) {
-        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) << 2;
+        disp = a64_sign_extend((w >> 5) & 0x7ffffu, 19u) * INT64_C(4);
         (void)a64_finish(engine, code, address, out_inst, ASMKIT_A64_PRFM_LITERAL, ASMKIT_INST_HINT,
             ASMKIT_INST_FLAG_PC_RELATIVE | ASMKIT_INST_FLAG_LITERAL);
         a64_set_opaque_operand(out_inst, 0u, w & 0x1fu, 5u);

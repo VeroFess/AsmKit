@@ -60,7 +60,7 @@ static uint32_t wasm_sleb64_size(int64_t value)
     return size;
 }
 
-static void wasm_write_uleb32(uint8_t* out_code, uint32_t* offset, uint32_t value)
+static void wasm_write_uleb32(uint8_t* ASMKIT_RESTRICT_WASM_SCRATCH out_code, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH offset, uint32_t value)
 {
     do {
         uint8_t byte;
@@ -74,7 +74,7 @@ static void wasm_write_uleb32(uint8_t* out_code, uint32_t* offset, uint32_t valu
     } while (value != 0u);
 }
 
-static void wasm_write_sleb64(uint8_t* out_code, uint32_t* offset, int64_t value)
+static void wasm_write_sleb64(uint8_t* ASMKIT_RESTRICT_WASM_SCRATCH out_code, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH offset, int64_t value)
 {
     int more;
     more = 1;
@@ -91,7 +91,7 @@ static void wasm_write_sleb64(uint8_t* out_code, uint32_t* offset, int64_t value
     }
 }
 
-static asmkit_status_t wasm_prepare(uint32_t required, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+static asmkit_status_t wasm_prepare(uint32_t required, uint8_t* ASMKIT_RESTRICT_WASM_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_WASM_OUT out_result)
 {
     if (out_code == 0 || out_result == 0) {
         return ASMKIT_ERR_INVALID_ARGUMENT;
@@ -104,12 +104,12 @@ static asmkit_status_t wasm_prepare(uint32_t required, uint8_t* out_code, size_t
     return ASMKIT_OK;
 }
 
-static int wasm_record_mode_matches(const asmkit_wasm_td_record_t* record, asmkit_mode_t mode)
+static int wasm_record_mode_matches(const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record, asmkit_mode_t mode)
 {
     return record->mode64 == 0u || mode == ASMKIT_MODE_WASM64;
 }
 
-static int wasm_td_features_match(const asmkit_engine_t* engine, const asmkit_wasm_td_record_t* record)
+static int wasm_td_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -121,7 +121,7 @@ static int wasm_td_features_match(const asmkit_engine_t* engine, const asmkit_wa
     return 1;
 }
 
-static const asmkit_wasm_td_record_t* wasm_find_record_by_id(const asmkit_engine_t* engine, uint32_t id, asmkit_mode_t mode, int* saw_feature_blocked_candidate)
+static const asmkit_wasm_td_record_t* wasm_find_record_by_id(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, uint32_t id, asmkit_mode_t mode, int* ASMKIT_RESTRICT_WASM_SCRATCH saw_feature_blocked_candidate)
 {
     size_t i;
     if (saw_feature_blocked_candidate != 0) {
@@ -141,7 +141,7 @@ static const asmkit_wasm_td_record_t* wasm_find_record_by_id(const asmkit_engine
     return 0;
 }
 
-static int wasm_operand_matches(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* operand)
+static int wasm_operand_matches(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* ASMKIT_RESTRICT_WASM_CONST operand)
 {
     switch (code) {
     case ASMKIT_WASM_TD_OPERAND_BLOCKTYPE:
@@ -160,7 +160,7 @@ static int wasm_operand_matches(asmkit_wasm_td_operand_code_t code, const asmkit
     }
 }
 
-static int wasm_record_matches_inst(const asmkit_wasm_td_record_t* record, const asmkit_inst_t* inst)
+static int wasm_record_matches_inst(const asmkit_wasm_td_record_t* ASMKIT_RESTRICT_WASM_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_WASM_CONST inst)
 {
     uint8_t i;
 
@@ -180,7 +180,7 @@ static int wasm_record_matches_inst(const asmkit_wasm_td_record_t* record, const
     return 1;
 }
 
-static const asmkit_wasm_td_record_t* wasm_find_record_by_mnemonic(const asmkit_engine_t* engine, const asmkit_inst_t* inst, int* saw_feature_blocked_candidate)
+static const asmkit_wasm_td_record_t* wasm_find_record_by_mnemonic(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_WASM_CONST inst, int* ASMKIT_RESTRICT_WASM_SCRATCH saw_feature_blocked_candidate)
 {
     const asmkit_wasm_td_record_t* default_record;
     size_t i;
@@ -210,7 +210,7 @@ static const asmkit_wasm_td_record_t* wasm_find_record_by_mnemonic(const asmkit_
     return default_record;
 }
 
-static asmkit_status_t wasm_operand_encoded_size(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* operand, uint32_t* size)
+static asmkit_status_t wasm_operand_encoded_size(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* ASMKIT_RESTRICT_WASM_CONST operand, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH size)
 {
     int64_t value;
 
@@ -250,7 +250,7 @@ static asmkit_status_t wasm_operand_encoded_size(asmkit_wasm_td_operand_code_t c
     }
 }
 
-static asmkit_status_t wasm_write_operand(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* operand, uint8_t* out_code, uint32_t* offset)
+static asmkit_status_t wasm_write_operand(asmkit_wasm_td_operand_code_t code, const asmkit_operand_t* ASMKIT_RESTRICT_WASM_CONST operand, uint8_t* ASMKIT_RESTRICT_WASM_SCRATCH out_code, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH offset)
 {
     int64_t value;
 
@@ -282,7 +282,7 @@ static asmkit_status_t wasm_write_operand(asmkit_wasm_td_operand_code_t code, co
     }
 }
 
-asmkit_status_t asmkit_gen_wasm_encode_inst(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_wasm_encode_inst(const asmkit_engine_t* ASMKIT_RESTRICT_WASM_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_WASM_CONST inst, uint8_t* ASMKIT_RESTRICT_WASM_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_WASM_OUT out_result)
 {
     const asmkit_wasm_td_record_t* record;
     asmkit_operand_t default_blocktype;

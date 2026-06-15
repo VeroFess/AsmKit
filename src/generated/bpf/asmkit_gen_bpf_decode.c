@@ -57,7 +57,7 @@ typedef struct asmkit_bpf_td_record {
 
 #include "asmkit_gen_bpf_decode_asmkit_bpf_records.inc"
 
-static int bpf_td_features_match(const asmkit_engine_t* engine, const asmkit_bpf_td_record_t* record)
+static int bpf_td_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const asmkit_bpf_td_record_t* ASMKIT_RESTRICT_BPF_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -69,7 +69,7 @@ static int bpf_td_features_match(const asmkit_engine_t* engine, const asmkit_bpf
     return 1;
 }
 
-static const asmkit_bpf_td_record_t* bpf_find_record(const asmkit_engine_t* engine, const uint8_t* code, int* saw_feature_blocked_candidate)
+static const asmkit_bpf_td_record_t* bpf_find_record(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const uint8_t* ASMKIT_RESTRICT_BPF_CODE code, int* ASMKIT_RESTRICT_BPF_SCRATCH saw_feature_blocked_candidate)
 {
     uint8_t src = (uint8_t)(code[1] >> 4);
     int16_t off = (int16_t)asmkit_load16le(code + 2);
@@ -111,7 +111,7 @@ static uint32_t bpf_reg_id(uint8_t reg, uint8_t width)
     return (width == 32u ? ASMKIT_BPF_REG_W0 : ASMKIT_BPF_REG_R0) + (uint32_t)reg * 2u;
 }
 
-static void bpf_reg(asmkit_operand_t* op, uint8_t index, uint8_t reg, uint8_t width)
+static void bpf_reg(asmkit_operand_t* ASMKIT_RESTRICT_BPF_OUT op, uint8_t index, uint8_t reg, uint8_t width)
 {
     op->kind = ASMKIT_OP_REG;
     op->operand_index = index;
@@ -119,7 +119,7 @@ static void bpf_reg(asmkit_operand_t* op, uint8_t index, uint8_t reg, uint8_t wi
     op->width = width;
 }
 
-static void bpf_imm(asmkit_operand_t* op, uint8_t index, int64_t imm, uint8_t width)
+static void bpf_imm(asmkit_operand_t* ASMKIT_RESTRICT_BPF_OUT op, uint8_t index, int64_t imm, uint8_t width)
 {
     op->kind = ASMKIT_OP_IMM;
     op->operand_index = index;
@@ -127,19 +127,19 @@ static void bpf_imm(asmkit_operand_t* op, uint8_t index, int64_t imm, uint8_t wi
     op->width = width;
 }
 
-static void bpf_mem(asmkit_operand_t* op, uint8_t index, uint8_t base, int16_t off)
+static void bpf_mem(asmkit_operand_t* ASMKIT_RESTRICT_BPF_OUT op, uint8_t index, uint8_t base, int16_t off)
 {
     *op = asmkit_operand_mem(bpf_reg_id(base, 64u), off, 64u);
     op->operand_index = index;
 }
 
-static void bpf_abs_mem(asmkit_operand_t* op, uint8_t index, int32_t off, uint8_t width)
+static void bpf_abs_mem(asmkit_operand_t* ASMKIT_RESTRICT_BPF_OUT op, uint8_t index, int32_t off, uint8_t width)
 {
     *op = asmkit_operand_mem(ASMKIT_BPF_REG_INVALID, off, width);
     op->operand_index = index;
 }
 
-static void bpf_pc_rel(asmkit_operand_t* op, uint64_t address, int16_t off)
+static void bpf_pc_rel(asmkit_operand_t* ASMKIT_RESTRICT_BPF_OUT op, uint64_t address, int16_t off)
 {
     int64_t disp = (int64_t)off * 8;
     op->kind = ASMKIT_OP_PC_REL;
@@ -149,7 +149,7 @@ static void bpf_pc_rel(asmkit_operand_t* op, uint64_t address, int16_t off)
     op->width = 16u;
 }
 
-asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* engine, const uint8_t* code, size_t code_size, uint64_t address, asmkit_inst_t* out_inst)
+asmkit_status_t asmkit_gen_bpf_decode_one(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const uint8_t* ASMKIT_RESTRICT_BPF_CODE code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT_BPF_OUT out_inst)
 {
     const asmkit_bpf_td_record_t* record;
     int saw_feature_blocked_candidate;

@@ -162,7 +162,7 @@ typedef struct asmkit_arm_bf_encode_record {
 #include "asmkit_gen_arm_encode_asmkit_arm_bf_pieces.inc"
 
 #include "asmkit_gen_arm_encode_asmkit_arm_bf_encode_records.inc"
-static int arm_fixed_mode_matches(const asmkit_engine_t* engine, const asmkit_arm_fixed_encode_record_t* record)
+static int arm_fixed_mode_matches(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_arm_fixed_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record)
 {
     if (record->mode == ASMKIT_ARM_FIXED_MODE_A32) {
         return engine->config.mode == ASMKIT_MODE_ARM_A32;
@@ -173,7 +173,7 @@ static int arm_fixed_mode_matches(const asmkit_engine_t* engine, const asmkit_ar
     return 0;
 }
 
-static int arm_fixed_features_match(const asmkit_engine_t* engine, const asmkit_arm_fixed_encode_record_t* record)
+static int arm_fixed_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_arm_fixed_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -185,7 +185,7 @@ static int arm_fixed_features_match(const asmkit_engine_t* engine, const asmkit_
     return 1;
 }
 
-static int arm_fixed_record_matches(const asmkit_inst_t* inst, const asmkit_arm_fixed_encode_record_t* record)
+static int arm_fixed_record_matches(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_arm_fixed_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record)
 {
     if (inst->id == record->id) {
         return 1;
@@ -193,7 +193,7 @@ static int arm_fixed_record_matches(const asmkit_inst_t* inst, const asmkit_arm_
     return inst->id == 0u && record->mnemonic_unique != 0u && inst->mnemonic_id == record->mnemonic_id;
 }
 
-static int arm_bf_mode_matches(const asmkit_engine_t* engine, const asmkit_arm_bf_encode_record_t* record)
+static int arm_bf_mode_matches(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_arm_bf_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record)
 {
     if (record->mode == ASMKIT_ARM_FIXED_MODE_A32) {
         return engine->config.mode == ASMKIT_MODE_ARM_A32;
@@ -204,7 +204,7 @@ static int arm_bf_mode_matches(const asmkit_engine_t* engine, const asmkit_arm_b
     return 0;
 }
 
-static int arm_bf_features_match(const asmkit_engine_t* engine, const asmkit_arm_bf_encode_record_t* record)
+static int arm_bf_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_arm_bf_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -216,7 +216,7 @@ static int arm_bf_features_match(const asmkit_engine_t* engine, const asmkit_arm
     return 1;
 }
 
-static int arm_bf_raw_unsigned(int64_t imm, uint32_t source_mask, uint32_t* out_value)
+static int arm_bf_raw_unsigned(int64_t imm, uint32_t source_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     if (imm < 0 || ((uint64_t)imm & ~(uint64_t)source_mask) != 0u) {
         return 0;
@@ -236,7 +236,7 @@ static uint32_t arm_bf_bit_width(uint32_t value)
     return width;
 }
 
-static int arm_bf_raw_signed(int64_t imm, uint32_t source_mask, uint32_t* out_value)
+static int arm_bf_raw_signed(int64_t imm, uint32_t source_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t bit_count;
     int64_t min_value;
@@ -263,7 +263,7 @@ static uint32_t arm_bf_rol32(uint32_t value, uint8_t rotate)
     return rotate == 0u ? value : (uint32_t)((value << rotate) | (value >> (32u - rotate)));
 }
 
-static int arm_bf_mod_imm(int64_t imm, uint32_t source_mask, uint32_t* out_value)
+static int arm_bf_mod_imm(int64_t imm, uint32_t source_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t value;
     uint32_t rotate;
@@ -284,7 +284,7 @@ static int arm_bf_mod_imm(int64_t imm, uint32_t source_mask, uint32_t* out_value
     return 0;
 }
 
-static int arm_bf_t2_so_imm(int64_t imm, uint32_t source_mask, uint32_t* out_value)
+static int arm_bf_t2_so_imm(int64_t imm, uint32_t source_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t value;
     uint32_t imm8;
@@ -321,7 +321,7 @@ static int arm_bf_t2_so_imm(int64_t imm, uint32_t source_mask, uint32_t* out_val
     return 0;
 }
 
-static uint64_t arm_bf_pc_rel_target(const asmkit_inst_t* inst, const asmkit_operand_t* operand)
+static uint64_t arm_bf_pc_rel_target(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand)
 {
     if (operand->abs_target != 0u || operand->imm == 0) {
         return operand->abs_target;
@@ -329,7 +329,7 @@ static uint64_t arm_bf_pc_rel_target(const asmkit_inst_t* inst, const asmkit_ope
     return inst->address + (uint64_t)operand->imm;
 }
 
-static int arm_bf_arm_adr_value(int64_t disp, uint32_t source_mask, uint32_t* out_value)
+static int arm_bf_arm_adr_value(int64_t disp, uint32_t source_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t imm;
     uint32_t value;
@@ -366,7 +366,7 @@ static int arm_bf_arm_adr_value(int64_t disp, uint32_t source_mask, uint32_t* ou
     return 0;
 }
 
-static int arm_bf_pc_rel_value(const asmkit_inst_t* inst, const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_pc_rel_value(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint64_t target;
     int64_t disp;
@@ -498,7 +498,7 @@ static int arm_bf_pc_rel_value(const asmkit_inst_t* inst, const asmkit_operand_t
     }
 }
 
-static int arm_bf_imm_value(const asmkit_inst_t* inst, const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_imm_value(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     if (operand->kind != ASMKIT_OP_IMM) {
         return 0;
@@ -621,7 +621,7 @@ static int arm_bf_imm_value(const asmkit_inst_t* inst, const asmkit_operand_t* o
     }
 }
 
-static int arm_bf_register_info_matches_class(const asmkit_register_info_t* info, uint8_t reg_class, uint16_t expected_width)
+static int arm_bf_register_info_matches_class(const asmkit_register_info_t* ASMKIT_RESTRICT_ARM_CONST info, uint8_t reg_class, uint16_t expected_width)
 {
     if (info == 0) {
         return 0;
@@ -661,7 +661,7 @@ static uint32_t arm_bf_vec_list_shape(uint8_t transform)
     }
 }
 
-static int arm_bf_vec_list_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_vec_list_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     const asmkit_register_info_t* info;
     uint32_t shape;
@@ -690,7 +690,7 @@ static int arm_bf_vec_list_value(const asmkit_operand_t* operand, const asmkit_a
     return 0;
 }
 
-static int arm_bf_reg_list_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_reg_list_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     if (desc->reg_class == ASMKIT_ARM_REGCLASS_DPR || desc->reg_class == ASMKIT_ARM_REGCLASS_SPR) {
         const asmkit_register_info_t* info;
@@ -742,7 +742,7 @@ static int arm_bf_reg_list_value(const asmkit_operand_t* operand, const asmkit_a
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_reg_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     const asmkit_register_info_t* info;
     if (operand->kind != ASMKIT_OP_REG) {
@@ -767,7 +767,7 @@ static int arm_bf_reg_value(const asmkit_operand_t* operand, const asmkit_arm_bf
     return 0;
 }
 
-static int arm_bf_gpr4_encoding(uint64_t reg, uint16_t width, uint32_t* out_value)
+static int arm_bf_gpr4_encoding(uint64_t reg, uint16_t width, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     const asmkit_register_info_t* info;
     if (reg == 0u) {
@@ -786,7 +786,7 @@ static int arm_bf_gpr4_encoding(uint64_t reg, uint16_t width, uint32_t* out_valu
     return 0;
 }
 
-static int arm_bf_qpr_encoding(uint64_t reg, uint32_t* out_value)
+static int arm_bf_qpr_encoding(uint64_t reg, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     const asmkit_register_info_t* info;
     if (reg == 0u) {
@@ -800,7 +800,7 @@ static int arm_bf_qpr_encoding(uint64_t reg, uint32_t* out_value)
     return 0;
 }
 
-static int arm_bf_plain_reg_encoding(const asmkit_operand_t* operand, uint8_t reg_class, uint16_t width, uint32_t* out_value)
+static int arm_bf_plain_reg_encoding(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint8_t reg_class, uint16_t width, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     const asmkit_register_info_t* info;
     if (operand->kind != ASMKIT_OP_REG) {
@@ -826,7 +826,7 @@ static int arm_bf_plain_reg_encoding(const asmkit_operand_t* operand, uint8_t re
     return 0;
 }
 
-static int arm_bf_tgpr_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t odd, uint32_t* out_value)
+static int arm_bf_tgpr_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t odd, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t encoded;
     if (!arm_bf_plain_reg_encoding(operand, ASMKIT_ARM_REGCLASS_GPR, 32u, &encoded)) {
@@ -845,7 +845,7 @@ static int arm_bf_tgpr_value(const asmkit_operand_t* operand, const asmkit_arm_b
     return 1;
 }
 
-static int arm_bf_postidx_reg_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_postidx_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t reg;
     if (!arm_bf_plain_reg_encoding(operand, ASMKIT_ARM_REGCLASS_GPR, 32u, &reg)) {
@@ -858,7 +858,7 @@ static int arm_bf_postidx_reg_value(const asmkit_operand_t* operand, uint32_t* o
     return 1;
 }
 
-static int arm_bf_fixed_reg_matches(const asmkit_operand_t* operand, uint64_t expected_reg)
+static int arm_bf_fixed_reg_matches(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint64_t expected_reg)
 {
     if (operand->kind != ASMKIT_OP_REG || operand->reg != expected_reg) {
         return 0;
@@ -872,7 +872,7 @@ static int arm_bf_fixed_reg_matches(const asmkit_operand_t* operand, uint64_t ex
     return 1;
 }
 
-static int arm_bf_derived_reg_matches(const asmkit_operand_t* operand, const asmkit_operand_t* base_operand, const asmkit_arm_bf_operand_desc_t* desc)
+static int arm_bf_derived_reg_matches(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST base_operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc)
 {
     uint32_t reg;
     uint32_t base;
@@ -897,7 +897,7 @@ static int arm_bf_derived_reg_matches(const asmkit_operand_t* operand, const asm
     return reg == base + delta;
 }
 
-static uint32_t arm_mve_mem_disp_scale(const asmkit_arm_bf_operand_desc_t* desc)
+static uint32_t arm_mve_mem_disp_scale(const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc)
 {
     if (desc->width == 64u) { return 8u; }
     if (desc->width == 32u) { return 4u; }
@@ -905,7 +905,7 @@ static uint32_t arm_mve_mem_disp_scale(const asmkit_arm_bf_operand_desc_t* desc)
     return 1u;
 }
 
-static int arm_bf_mem_base_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_base_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     if (operand->kind != ASMKIT_OP_MEM || desc->transform != ASMKIT_ARM_BF_TRANSFORM_MEM_BASE) {
@@ -926,7 +926,7 @@ static int arm_bf_mem_base_value(const asmkit_operand_t* operand, const asmkit_a
     return 1;
 }
 
-static int arm_bf_mem_base_disp_value(const asmkit_operand_t* operand, int64_t min_disp, int64_t max_disp, uint32_t scale, uint32_t imm_shift, uint32_t base_shift, uint32_t base_mask, uint32_t imm_mask, uint32_t sign_bit, uint32_t positive_sign_value, uint32_t* out_value)
+static int arm_bf_mem_base_disp_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, int64_t min_disp, int64_t max_disp, uint32_t scale, uint32_t imm_shift, uint32_t base_shift, uint32_t base_mask, uint32_t imm_mask, uint32_t sign_bit, uint32_t positive_sign_value, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     int64_t disp;
@@ -962,7 +962,7 @@ static int arm_bf_mem_base_disp_value(const asmkit_operand_t* operand, int64_t m
     return 1;
 }
 
-static int arm_bf_mem_sp_disp_value(const asmkit_operand_t* operand, int64_t max_disp, uint32_t scale, uint32_t imm_mask, uint32_t* out_value)
+static int arm_bf_mem_sp_disp_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, int64_t max_disp, uint32_t scale, uint32_t imm_mask, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     int64_t disp;
     uint32_t abs_disp;
@@ -983,7 +983,7 @@ static int arm_bf_mem_sp_disp_value(const asmkit_operand_t* operand, int64_t max
     return 1;
 }
 
-static int arm_bf_mem_thumb_rr_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_thumb_rr_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1002,7 +1002,7 @@ static int arm_bf_mem_thumb_rr_value(const asmkit_operand_t* operand, uint32_t* 
     return 1;
 }
 
-static int arm_bf_mem_t2_so_reg_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_t2_so_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1033,7 +1033,7 @@ static uint32_t arm_bf_arm_alignment_code(int64_t alignment)
     return 0u;
 }
 
-static int arm_bf_mem_neon_addrmode6_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_neon_addrmode6_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t align;
@@ -1050,7 +1050,7 @@ static int arm_bf_mem_neon_addrmode6_value(const asmkit_operand_t* operand, cons
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_neon_am6offset_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_neon_am6offset_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t index;
     if (operand->kind != ASMKIT_OP_MEM || operand->mem.base != 0u || operand->mem.segment != 0u || operand->mem.displacement != 0 ||
@@ -1065,7 +1065,7 @@ static int arm_bf_mem_neon_am6offset_value(const asmkit_operand_t* operand, cons
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_mve_addr_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_mve_addr_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1118,7 +1118,7 @@ static int arm_bf_mem_mve_addr_value(const asmkit_operand_t* operand, const asmk
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_mve_addr_q_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_mve_addr_q_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1137,7 +1137,7 @@ static int arm_bf_mem_mve_addr_q_value(const asmkit_operand_t* operand, const as
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_mve_addr_qi_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_mve_addr_qi_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t imm;
@@ -1169,7 +1169,7 @@ static int arm_bf_mem_mve_addr_qi_value(const asmkit_operand_t* operand, const a
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_tbb_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t expected_scale, uint32_t* out_value)
+static int arm_bf_mem_tbb_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t expected_scale, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1189,7 +1189,7 @@ static int arm_bf_mem_tbb_value(const asmkit_operand_t* operand, const asmkit_ar
     return (*out_value & ~desc->source_mask) == 0u;
 }
 
-static int arm_bf_mem_thumb_pc_disp_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_thumb_pc_disp_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     int64_t disp;
     if (operand->kind != ASMKIT_OP_MEM || operand->mem.base != ASMKIT_ARM_REG_PC || operand->mem.index != 0u || operand->mem.segment != 0u ||
@@ -1205,7 +1205,7 @@ static int arm_bf_mem_thumb_pc_disp_value(const asmkit_operand_t* operand, uint3
     return 1;
 }
 
-static int arm_bf_encode_arm_mem_shift(uint32_t shift_kind, uint32_t shift_amount, uint32_t* out_value)
+static int arm_bf_encode_arm_mem_shift(uint32_t shift_kind, uint32_t shift_amount, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     if (shift_kind == 4u) {
         if (shift_amount != 0u) {
@@ -1235,7 +1235,7 @@ static int arm_bf_encode_arm_mem_shift(uint32_t shift_kind, uint32_t shift_amoun
     return 1;
 }
 
-static int arm_bf_mem_arm_addrmode3_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_arm_addrmode3_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t encoded;
@@ -1275,7 +1275,7 @@ static int arm_bf_mem_arm_addrmode3_value(const asmkit_operand_t* operand, uint3
     return 1;
 }
 
-static int arm_bf_mem_arm_ldst_so_reg_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_arm_ldst_so_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t base;
     uint32_t index;
@@ -1296,7 +1296,7 @@ static int arm_bf_mem_arm_ldst_so_reg_value(const asmkit_operand_t* operand, uin
     return 1;
 }
 
-static int arm_bf_mem_arm_am2offset_reg_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_arm_am2offset_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t index;
     uint32_t shift;
@@ -1316,7 +1316,7 @@ static int arm_bf_mem_arm_am2offset_reg_value(const asmkit_operand_t* operand, u
     return 1;
 }
 
-static int arm_bf_mem_arm_am3offset_value(const asmkit_operand_t* operand, uint32_t* out_value)
+static int arm_bf_mem_arm_am3offset_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t encoded;
     int negative;
@@ -1352,7 +1352,7 @@ static int arm_bf_mem_arm_am3offset_value(const asmkit_operand_t* operand, uint3
     return 1;
 }
 
-static int arm_bf_mem_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_mem_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     switch (desc->transform) {
     case ASMKIT_ARM_BF_TRANSFORM_MEM_BASE:
@@ -1419,7 +1419,7 @@ static int arm_bf_mem_value(const asmkit_operand_t* operand, const asmkit_arm_bf
     }
 }
 
-static int arm_bf_shifted_reg_imm_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_shifted_reg_imm_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t reg;
     uint32_t amount;
@@ -1465,7 +1465,7 @@ static int arm_bf_shifted_reg_imm_value(const asmkit_operand_t* operand, const a
     return 1;
 }
 
-static int arm_bf_shifted_reg_reg_value(const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_shifted_reg_reg_value(const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     uint32_t reg;
     uint32_t shift_reg;
@@ -1493,7 +1493,7 @@ static int arm_bf_shifted_reg_reg_value(const asmkit_operand_t* operand, const a
     return 1;
 }
 
-static int arm_bf_operand_value(const asmkit_inst_t* inst, const asmkit_operand_t* operand, const asmkit_arm_bf_operand_desc_t* desc, uint32_t* out_value)
+static int arm_bf_operand_value(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_operand_t* ASMKIT_RESTRICT_ARM_CONST operand, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc, uint32_t* ASMKIT_RESTRICT_ARM_SCRATCH out_value)
 {
     if (desc->kind == ASMKIT_ARM_BF_OPERAND_REG) {
         if (desc->transform == ASMKIT_ARM_BF_TRANSFORM_SHIFTED_REG_IMM) {
@@ -1538,7 +1538,7 @@ static int arm_bf_operand_value(const asmkit_inst_t* inst, const asmkit_operand_
     return 0;
 }
 
-static int arm_bf_operand_alias_matches(const asmkit_inst_t* inst, const asmkit_arm_bf_operand_desc_t* desc)
+static int arm_bf_operand_alias_matches(const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, const asmkit_arm_bf_operand_desc_t* ASMKIT_RESTRICT_ARM_CONST desc)
 {
     const asmkit_operand_t* operand;
     const asmkit_operand_t* base_operand;
@@ -1599,7 +1599,7 @@ static int arm_bf_operand_alias_matches(const asmkit_inst_t* inst, const asmkit_
     return reg == base;
 }
 
-static int arm_bf_record_identity_matches(const asmkit_arm_bf_encode_record_t* record, const asmkit_inst_t* inst)
+static int arm_bf_record_identity_matches(const asmkit_arm_bf_encode_record_t* ASMKIT_RESTRICT_ARM_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst)
 {
     if (inst->id == record->id) {
         return 1;
@@ -1607,7 +1607,7 @@ static int arm_bf_record_identity_matches(const asmkit_arm_bf_encode_record_t* r
     return inst->id == 0u && record->mnemonic_default != 0u && inst->mnemonic_id == record->mnemonic_id;
 }
 
-asmkit_status_t asmkit_gen_arm_encode_fixed(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_arm_encode_fixed(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, uint8_t* ASMKIT_RESTRICT_ARM_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_ARM_OUT out_result)
 {
     int saw_feature_gated_candidate;
     size_t i;
@@ -1646,7 +1646,7 @@ asmkit_status_t asmkit_gen_arm_encode_fixed(const asmkit_engine_t* engine, const
     return saw_feature_gated_candidate ? ASMKIT_ERR_UNSUPPORTED_FEATURE : ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
 }
 
-asmkit_status_t asmkit_gen_arm_encode_bitfield(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_arm_encode_bitfield(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, uint8_t* ASMKIT_RESTRICT_ARM_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_ARM_OUT out_result)
 {
     int saw_feature_blocked_candidate;
     int saw_feature_matched_candidate;
@@ -1717,7 +1717,7 @@ asmkit_status_t asmkit_gen_arm_encode_bitfield(const asmkit_engine_t* engine, co
     return saw_feature_blocked_candidate != 0 && saw_feature_matched_candidate == 0 ? ASMKIT_ERR_UNSUPPORTED_FEATURE : ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
 }
 
-asmkit_status_t asmkit_gen_arm_encode_inst(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_arm_encode_inst(const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_ARM_CONST inst, uint8_t* ASMKIT_RESTRICT_ARM_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_ARM_OUT out_result)
 {
     if (inst != 0 && inst->operand_count != 0u) {
         return asmkit_gen_arm_encode_bitfield(engine, inst, out_code, out_capacity, out_result);
@@ -1726,13 +1726,13 @@ asmkit_status_t asmkit_gen_arm_encode_inst(const asmkit_engine_t* engine, const 
 }
 
 asmkit_status_t asmkit_gen_arm_emit_rel(
-    const asmkit_engine_t* engine,
+    const asmkit_engine_t* ASMKIT_RESTRICT_ARM_CONST engine,
     int is_call,
     uint64_t from_address,
     uint64_t to_address,
-    uint8_t* out_code,
+    uint8_t* ASMKIT_RESTRICT_ARM_SCRATCH out_code,
     size_t out_capacity,
-    asmkit_emit_result_t* out_result)
+    asmkit_emit_result_t* ASMKIT_RESTRICT_ARM_OUT out_result)
 {
     int64_t disp;
     uint32_t word;

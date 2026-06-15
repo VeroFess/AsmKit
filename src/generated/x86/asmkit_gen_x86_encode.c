@@ -130,7 +130,7 @@ static uint8_t x86_encode_mode_bit(asmkit_mode_t mode)
     return 0u;
 }
 
-static int x86_encode_features_match(const asmkit_engine_t* engine, const asmkit_x86_encode_record_t* record)
+static int x86_encode_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -157,7 +157,7 @@ static int x86_register_id_in_range(uint32_t reg, uint32_t first, uint32_t last)
     return reg >= first && reg <= last;
 }
 
-static int x86_register_info_is_gpr(const asmkit_register_info_t* info)
+static int x86_register_info_is_gpr(const asmkit_register_info_t* ASMKIT_RESTRICT_X86_CONST info)
 {
     uint32_t reg = info->id;
     if (reg == ASMKIT_X86_REG_IP || reg == ASMKIT_X86_REG_EIP || reg == ASMKIT_X86_REG_RIP) { return 0; }
@@ -168,7 +168,7 @@ static int x86_register_info_is_gpr(const asmkit_register_info_t* info)
     return reg == ASMKIT_X86_REG_EIZ || reg == ASMKIT_X86_REG_RIZ || reg == ASMKIT_X86_REG_SSP;
 }
 
-static int x86_register_info_matches_class(const asmkit_register_info_t* info, uint8_t reg_class, uint16_t expected_width)
+static int x86_register_info_matches_class(const asmkit_register_info_t* ASMKIT_RESTRICT_X86_CONST info, uint8_t reg_class, uint16_t expected_width)
 {
     uint32_t reg = info->id;
     switch (reg_class) {
@@ -199,7 +199,7 @@ static int x86_register_info_matches_class(const asmkit_register_info_t* info, u
     }
 }
 
-static int x86_register_encoding(uint64_t reg, uint16_t expected_width, uint8_t reg_class, asmkit_x86_reg_value_t* out_value)
+static int x86_register_encoding(uint64_t reg, uint16_t expected_width, uint8_t reg_class, asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_OUT out_value)
 {
     const asmkit_register_info_t* info;
     uint32_t reg_id;
@@ -242,7 +242,7 @@ static uint16_t x86_register_operand_container_width(uint16_t width, uint8_t reg
     return width;
 }
 
-static int x86_reg_operand_value(const asmkit_engine_t* engine, const asmkit_operand_t* operand, uint16_t expected_width, uint8_t reg_class, asmkit_x86_reg_value_t* out_value)
+static int x86_reg_operand_value(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, uint16_t expected_width, uint8_t reg_class, asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_OUT out_value)
 {
     uint16_t accepted_width;
     if (operand->kind == ASMKIT_OP_OPAQUE && reg_class == ASMKIT_X86_REGCLASS_TILE) {
@@ -281,19 +281,19 @@ static uint32_t x86_accumulator_register(uint16_t width)
     return ASMKIT_X86_REG_INVALID;
 }
 
-static int x86_operand_is_accumulator(const asmkit_operand_t* operand, uint16_t width)
+static int x86_operand_is_accumulator(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, uint16_t width)
 {
     return operand->kind == ASMKIT_OP_REG && operand->reg == x86_accumulator_register(width) &&
            (operand->width == 0u || width == 0u || operand->width == width);
 }
 
-static int x86_operand_is_dx(const asmkit_operand_t* operand)
+static int x86_operand_is_dx(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     return operand->kind == ASMKIT_OP_REG && operand->reg == ASMKIT_X86_REG_DX &&
            (operand->width == 0u || operand->width == 16u);
 }
 
-static int x86_disp_size_for_value(int64_t disp, uint8_t* out_size)
+static int x86_disp_size_for_value(int64_t disp, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_size)
 {
     if (disp == 0) {
         *out_size = 0u;
@@ -310,35 +310,35 @@ static int x86_disp_size_for_value(int64_t disp, uint8_t* out_size)
     return 0;
 }
 
-static uint64_t x86_operand_mem_base(const asmkit_operand_t* operand)
+static uint64_t x86_operand_mem_base(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     return operand->mem.base;
 }
 
-static uint64_t x86_operand_mem_index(const asmkit_operand_t* operand)
+static uint64_t x86_operand_mem_index(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     return operand->mem.index;
 }
 
-static int64_t x86_operand_mem_disp(const asmkit_operand_t* operand)
+static int64_t x86_operand_mem_disp(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     return operand->mem.displacement;
 }
 
-static uint16_t x86_operand_mem_address_width(const asmkit_engine_t* engine, const asmkit_operand_t* operand)
+static uint16_t x86_operand_mem_address_width(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     if (operand->mem.address_width != 0u) { return operand->mem.address_width; }
     if (engine->config.mode == ASMKIT_MODE_X86_16) { return 16u; }
     return engine->config.mode == ASMKIT_MODE_X86_64 ? 64u : 32u;
 }
 
-static uint8_t x86_operand_mem_scale(const asmkit_operand_t* operand)
+static uint8_t x86_operand_mem_scale(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand)
 {
     if (operand->mem.scale == 0u) { return 1u; }
     return operand->mem.scale;
 }
 
-static int x86_scale_bits(uint8_t scale, uint8_t* out_bits)
+static int x86_scale_bits(uint8_t scale, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_bits)
 {
     if (scale == 1u) { *out_bits = 0u; return 1; }
     if (scale == 2u) { *out_bits = 1u; return 1; }
@@ -347,7 +347,7 @@ static int x86_scale_bits(uint8_t scale, uint8_t* out_bits)
     return 0;
 }
 
-static int x86_segment_prefix(uint64_t segment, uint8_t* out_prefix)
+static int x86_segment_prefix(uint64_t segment, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_prefix)
 {
     *out_prefix = 0u;
     if (segment == 0u) { return 1; }
@@ -360,7 +360,7 @@ static int x86_segment_prefix(uint64_t segment, uint8_t* out_prefix)
     return 0;
 }
 
-static int x86_pack_rm_operand_16(const asmkit_operand_t* operand, asmkit_x86_rm_value_t* out_value)
+static int x86_pack_rm_operand_16(const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, asmkit_x86_rm_value_t* ASMKIT_RESTRICT_X86_OUT out_value)
 {
     uint64_t base_reg;
     uint64_t index_reg;
@@ -423,7 +423,7 @@ static int x86_pack_rm_operand_16(const asmkit_operand_t* operand, asmkit_x86_rm
     return 1;
 }
 
-static int x86_pack_rm_operand(const asmkit_engine_t* engine, const asmkit_operand_t* operand, uint16_t expected_width, uint8_t reg_class, asmkit_x86_rm_value_t* out_value)
+static int x86_pack_rm_operand(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, uint16_t expected_width, uint8_t reg_class, asmkit_x86_rm_value_t* ASMKIT_RESTRICT_X86_OUT out_value)
 {
     asmkit_x86_reg_value_t reg;
     asmkit_zero(out_value, sizeof(*out_value));
@@ -545,7 +545,7 @@ static int x86_pack_rm_operand(const asmkit_engine_t* engine, const asmkit_opera
     return 0;
 }
 
-static int x86_append_u8(uint8_t* buffer, size_t* size, uint8_t value)
+static int x86_append_u8(uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size, uint8_t value)
 {
     if (*size >= ASMKIT_X86_MAX_INSTRUCTION_BYTES) {
         return 0;
@@ -555,7 +555,7 @@ static int x86_append_u8(uint8_t* buffer, size_t* size, uint8_t value)
     return 1;
 }
 
-static int x86_append_disp(uint8_t* buffer, size_t* size, int32_t disp, uint8_t disp_size)
+static int x86_append_disp(uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size, int32_t disp, uint8_t disp_size)
 {
     if (disp_size == 0u) {
         return 1;
@@ -595,7 +595,7 @@ static int x86_unsigned_imm_fits(int64_t value, uint8_t size)
     return size == 8u;
 }
 
-static int x86_append_imm(uint8_t* buffer, size_t* size, int64_t imm, uint8_t imm_size, uint8_t imm_signed)
+static int x86_append_imm(uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size, int64_t imm, uint8_t imm_size, uint8_t imm_signed)
 {
     if (imm_size == 0u) {
         return 1;
@@ -612,7 +612,7 @@ static int x86_append_imm(uint8_t* buffer, size_t* size, int64_t imm, uint8_t im
     return 0;
 }
 
-static int x86_immediate_operand_value(const asmkit_inst_t* inst, const asmkit_operand_t* operand, size_t next_size, int64_t* out_value)
+static int x86_immediate_operand_value(const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, size_t next_size, int64_t* ASMKIT_RESTRICT_X86_SCRATCH out_value)
 {
     if (operand->kind == ASMKIT_OP_PC_REL) {
         if (operand->abs_target != 0u || operand->imm == 0) {
@@ -648,7 +648,7 @@ static uint16_t x86_default_address_width_for_mode(asmkit_mode_t mode)
     return 0u;
 }
 
-static int x86_address_prefix_for_width(asmkit_mode_t mode, uint16_t address_width, uint8_t* out_prefix)
+static int x86_address_prefix_for_width(asmkit_mode_t mode, uint16_t address_width, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_prefix)
 {
     uint16_t default_width;
     *out_prefix = 0u;
@@ -664,7 +664,7 @@ static int x86_address_prefix_for_width(asmkit_mode_t mode, uint16_t address_wid
     return 0;
 }
 
-static int x86_record_address_prefix(const asmkit_engine_t* engine, const asmkit_x86_encode_record_t* record, const asmkit_inst_t* inst, uint8_t* out_prefix)
+static int x86_record_address_prefix(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_prefix)
 {
     uint8_t i;
     uint16_t requested;
@@ -685,7 +685,7 @@ static int x86_record_address_prefix(const asmkit_engine_t* engine, const asmkit
     return x86_address_prefix_for_width(engine->config.mode, requested, out_prefix);
 }
 
-static int x86_record_ad_size_matches_operands(const asmkit_engine_t* engine, const asmkit_x86_encode_record_t* record, const asmkit_inst_t* inst)
+static int x86_record_ad_size_matches_operands(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst)
 {
     uint8_t i;
     if (record->ad_size == ASMKIT_X86_TD_ADSIZE_ANY) { return 1; }
@@ -704,7 +704,7 @@ static uint32_t x86_string_base_for_width(uint16_t address_width, int is_dst)
     return ASMKIT_X86_REG_INVALID;
 }
 
-static int x86_string_operand_matches(const asmkit_engine_t* engine, const asmkit_operand_t* operand, uint16_t width, int is_dst, uint8_t* segment_prefix)
+static int x86_string_operand_matches(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, uint16_t width, int is_dst, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH segment_prefix)
 {
     uint16_t address_width;
     uint32_t expected_base;
@@ -717,7 +717,7 @@ static int x86_string_operand_matches(const asmkit_engine_t* engine, const asmki
     return x86_segment_prefix(operand->mem.segment, segment_prefix);
 }
 
-static int x86_moffs_operand_value(const asmkit_engine_t* engine, const asmkit_x86_encode_record_t* record, const asmkit_operand_t* operand, int64_t* out_offset, uint8_t* out_segment_prefix)
+static int x86_moffs_operand_value(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_operand_t* ASMKIT_RESTRICT_X86_CONST operand, int64_t* ASMKIT_RESTRICT_X86_SCRATCH out_offset, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_segment_prefix)
 {
     uint16_t address_width;
     if (operand->kind != ASMKIT_OP_MEM || record->rm_operand >= record->operand_count) { return 0; }
@@ -730,7 +730,7 @@ static int x86_moffs_operand_value(const asmkit_engine_t* engine, const asmkit_x
     return x86_unsigned_imm_fits(*out_offset, record->imm_size);
 }
 
-static int x86_append_prefixes(const asmkit_engine_t* engine, const asmkit_x86_encode_record_t* record, uint8_t* buffer, size_t* size)
+static int x86_append_prefixes(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size)
 {
     int need_66;
     if (record->vector_type != ASMKIT_X86_TD_ENC_NORMAL) {
@@ -748,7 +748,7 @@ static int x86_append_prefixes(const asmkit_engine_t* engine, const asmkit_x86_e
     return 1;
 }
 
-static int x86_append_opcode_map(const asmkit_x86_encode_record_t* record, uint8_t* buffer, size_t* size)
+static int x86_append_opcode_map(const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size)
 {
     if (record->vector_type != ASMKIT_X86_TD_ENC_NORMAL) { return 1; }
     if (record->opcode_map == 0u) { return 1; }
@@ -781,9 +781,9 @@ static uint8_t x86_vex_evex_map_selector(uint8_t opcode_map)
 }
 
 static int x86_append_vector_prefix(
-    const asmkit_x86_encode_record_t* record, const asmkit_x86_rm_value_t* rm, const asmkit_x86_reg_value_t* reg,
-    const asmkit_x86_reg_value_t* opcode_reg, const asmkit_x86_reg_value_t* vvvv, const asmkit_x86_reg_value_t* evex_mask,
-    int has_rm, int has_reg, int has_opcode_reg, int has_vvvv, int has_evex_mask, uint8_t evex_round_control, uint8_t* buffer, size_t* size)
+    const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_x86_rm_value_t* ASMKIT_RESTRICT_X86_CONST rm, const asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_CONST reg,
+    const asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_CONST opcode_reg, const asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_CONST vvvv, const asmkit_x86_reg_value_t* ASMKIT_RESTRICT_X86_CONST evex_mask,
+    int has_rm, int has_reg, int has_opcode_reg, int has_vvvv, int has_evex_mask, uint8_t evex_round_control, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH buffer, size_t* ASMKIT_RESTRICT_X86_SCRATCH size)
 {
     uint8_t map_selector;
     uint8_t r;
@@ -839,7 +839,7 @@ static int x86_append_vector_prefix(
     return x86_append_u8(buffer, size, byte2) && x86_append_u8(buffer, size, byte3);
 }
 
-static int x86_record_identity_matches(const asmkit_x86_encode_record_t* record, const asmkit_inst_t* inst)
+static int x86_record_identity_matches(const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst)
 {
     if (inst->id == record->id) {
         return 1;
@@ -847,7 +847,7 @@ static int x86_record_identity_matches(const asmkit_x86_encode_record_t* record,
     return inst->id == 0u && inst->mnemonic_id != ASMKIT_MNEMONIC_INVALID && inst->mnemonic_id == record->mnemonic_id;
 }
 
-static int x86_record_operands_match(const asmkit_x86_encode_record_t* record, const asmkit_inst_t* inst)
+static int x86_record_operands_match(const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst)
 {
     uint8_t i;
     if (inst->operand_count != record->operand_count) {
@@ -865,7 +865,7 @@ static int x86_record_operands_match(const asmkit_x86_encode_record_t* record, c
     return 1;
 }
 
-static asmkit_status_t x86_encode_record_bytes(const asmkit_engine_t* engine, const asmkit_inst_t* inst, const asmkit_x86_encode_record_t* record, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+static asmkit_status_t x86_encode_record_bytes(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst, const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_X86_OUT out_result)
 {
     uint8_t temp[ASMKIT_MAX_INST_BYTES];
     size_t size;
@@ -1123,7 +1123,7 @@ static asmkit_status_t x86_encode_record_bytes(const asmkit_engine_t* engine, co
     return ASMKIT_OK;
 }
 
-asmkit_status_t asmkit_gen_x86_encode_inst(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_x86_encode_inst(const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst, uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_X86_OUT out_result)
 {
     int saw_feature_blocked_candidate;
     int saw_feature_matched_candidate;
@@ -1157,13 +1157,13 @@ asmkit_status_t asmkit_gen_x86_encode_inst(const asmkit_engine_t* engine, const 
 }
 
 asmkit_status_t asmkit_gen_x86_emit_rel(
-    const asmkit_engine_t* engine,
+    const asmkit_engine_t* ASMKIT_RESTRICT_X86_CONST engine,
     int is_call,
     uint64_t from_address,
     uint64_t to_address,
-    uint8_t* out_code,
+    uint8_t* ASMKIT_RESTRICT_X86_SCRATCH out_code,
     size_t out_capacity,
-    asmkit_emit_result_t* out_result)
+    asmkit_emit_result_t* ASMKIT_RESTRICT_X86_OUT out_result)
 {
     uint32_t size;
     int64_t disp;

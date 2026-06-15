@@ -57,7 +57,7 @@ typedef struct asmkit_bpf_td_record {
 
 #include "asmkit_gen_bpf_encode_asmkit_bpf_records.inc"
 
-static int bpf_td_features_match(const asmkit_engine_t* engine, const asmkit_bpf_td_record_t* record)
+static int bpf_td_features_match(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const asmkit_bpf_td_record_t* ASMKIT_RESTRICT_BPF_CONST record)
 {
     uint32_t word;
     for (word = 0u; word < ASMKIT_FEATURE_WORD_COUNT; ++word) {
@@ -69,7 +69,7 @@ static int bpf_td_features_match(const asmkit_engine_t* engine, const asmkit_bpf
     return 1;
 }
 
-static const asmkit_bpf_td_record_t* bpf_find_record_by_id(const asmkit_engine_t* engine, uint32_t id, int* saw_feature_blocked_candidate)
+static const asmkit_bpf_td_record_t* bpf_find_record_by_id(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, uint32_t id, int* ASMKIT_RESTRICT_BPF_SCRATCH saw_feature_blocked_candidate)
 {
     size_t i;
     if (saw_feature_blocked_candidate != 0) {
@@ -91,7 +91,7 @@ static const asmkit_bpf_td_record_t* bpf_find_record_by_id(const asmkit_engine_t
 
 static int bpf_reg_ok(uint64_t reg);
 
-static int bpf_operand_width_matches(const asmkit_operand_t* operand, uint8_t width)
+static int bpf_operand_width_matches(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand, uint8_t width)
 {
     if (width == 0u) {
         return 1;
@@ -102,18 +102,18 @@ static int bpf_operand_width_matches(const asmkit_operand_t* operand, uint8_t wi
     return operand->width == width;
 }
 
-static int bpf_operand_is_reg(const asmkit_operand_t* operand, uint8_t width)
+static int bpf_operand_is_reg(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand, uint8_t width)
 {
     return operand->kind == ASMKIT_OP_REG && bpf_reg_ok(operand->reg) && bpf_operand_width_matches(operand, width);
 }
 
-static int bpf_operand_is_imm(const asmkit_operand_t* operand, uint8_t width)
+static int bpf_operand_is_imm(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand, uint8_t width)
 {
     (void)width;
     return operand->kind == ASMKIT_OP_IMM;
 }
 
-static int bpf_operand_is_mem(const asmkit_operand_t* operand, uint8_t width)
+static int bpf_operand_is_mem(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand, uint8_t width)
 {
     return operand->kind == ASMKIT_OP_MEM && operand->reg == 0u && operand->imm == 0 &&
            bpf_reg_ok(operand->mem.base) && operand->mem.index == 0u &&
@@ -121,7 +121,7 @@ static int bpf_operand_is_mem(const asmkit_operand_t* operand, uint8_t width)
            asmkit_i64_fits_i16(operand->mem.displacement) && bpf_operand_width_matches(operand, width);
 }
 
-static int bpf_operand_is_abs_mem(const asmkit_operand_t* operand, uint8_t width)
+static int bpf_operand_is_abs_mem(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand, uint8_t width)
 {
     return operand->kind == ASMKIT_OP_MEM && operand->reg == 0u && operand->imm == 0 &&
            operand->mem.base == ASMKIT_BPF_REG_INVALID && operand->mem.index == 0u &&
@@ -129,12 +129,12 @@ static int bpf_operand_is_abs_mem(const asmkit_operand_t* operand, uint8_t width
            asmkit_i64_fits_i32(operand->mem.displacement) && bpf_operand_width_matches(operand, width);
 }
 
-static int bpf_operand_is_target(const asmkit_operand_t* operand)
+static int bpf_operand_is_target(const asmkit_operand_t* ASMKIT_RESTRICT_BPF_CONST operand)
 {
     return operand->kind == ASMKIT_OP_PC_REL || operand->kind == ASMKIT_OP_IMM;
 }
 
-static int bpf_record_matches_mnemonic_operands(const asmkit_bpf_td_record_t* record, const asmkit_inst_t* inst)
+static int bpf_record_matches_mnemonic_operands(const asmkit_bpf_td_record_t* ASMKIT_RESTRICT_BPF_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_BPF_CONST inst)
 {
     if (record->mnemonic_id != inst->mnemonic_id || inst->mnemonic_id == ASMKIT_MNEMONIC_INVALID) {
         return 0;
@@ -176,7 +176,7 @@ static int bpf_record_matches_mnemonic_operands(const asmkit_bpf_td_record_t* re
     }
 }
 
-static const asmkit_bpf_td_record_t* bpf_find_record_by_mnemonic(const asmkit_engine_t* engine, const asmkit_inst_t* inst, int* saw_feature_blocked_candidate)
+static const asmkit_bpf_td_record_t* bpf_find_record_by_mnemonic(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_BPF_CONST inst, int* ASMKIT_RESTRICT_BPF_SCRATCH saw_feature_blocked_candidate)
 {
     size_t i;
     if (saw_feature_blocked_candidate != 0) {
@@ -201,7 +201,7 @@ static int bpf_reg_ok(uint64_t reg)
     return reg <= 15u;
 }
 
-static asmkit_status_t bpf_require_capacity(size_t required, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+static asmkit_status_t bpf_require_capacity(size_t required, uint8_t* ASMKIT_RESTRICT_BPF_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_BPF_OUT out_result)
 {
     if (out_code == 0 || out_result == 0) {
         return ASMKIT_ERR_INVALID_ARGUMENT;
@@ -214,7 +214,7 @@ static asmkit_status_t bpf_require_capacity(size_t required, uint8_t* out_code, 
     return ASMKIT_OK;
 }
 
-static asmkit_status_t bpf_pack_branch(const asmkit_inst_t* inst, uint8_t* out_code)
+static asmkit_status_t bpf_pack_branch(const asmkit_inst_t* ASMKIT_RESTRICT_BPF_CONST inst, uint8_t* ASMKIT_RESTRICT_BPF_SCRATCH out_code)
 {
     int64_t disp;
     if (inst->operand_count < 1u) {
@@ -235,7 +235,7 @@ static asmkit_status_t bpf_pack_branch(const asmkit_inst_t* inst, uint8_t* out_c
     return ASMKIT_OK;
 }
 
-asmkit_status_t asmkit_gen_bpf_encode_inst(const asmkit_engine_t* engine, const asmkit_inst_t* inst, uint8_t* out_code, size_t out_capacity, asmkit_encode_result_t* out_result)
+asmkit_status_t asmkit_gen_bpf_encode_inst(const asmkit_engine_t* ASMKIT_RESTRICT_BPF_CONST engine, const asmkit_inst_t* ASMKIT_RESTRICT_BPF_CONST inst, uint8_t* ASMKIT_RESTRICT_BPF_SCRATCH out_code, size_t out_capacity, asmkit_encode_result_t* ASMKIT_RESTRICT_BPF_OUT out_result)
 {
     const asmkit_bpf_td_record_t* record;
     asmkit_status_t status;

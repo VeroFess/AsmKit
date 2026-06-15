@@ -306,7 +306,7 @@ uint32_t asmkit_gen_wasm_instruction_count(void)
     return (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_instruction_infos);
 }
 
-const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_infos(uint32_t id, uint32_t* out_count)
+const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_infos(uint32_t id, uint32_t* ASMKIT_RESTRICT_WASM_SCRATCH out_count)
 {
     const asmkit_instruction_info_t* info;
     if (out_count != 0) { *out_count = 0u; }
