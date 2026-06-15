@@ -159,7 +159,7 @@ static int asmkit_test_x86_lock_prefix(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "lock inc") == 0);
+        ASMKIT_CHECK(strcmp(text, "lock inc [rip]") == 0);
     }
 #endif
 
@@ -190,7 +190,7 @@ static int asmkit_test_x86_rep_string_prefixes(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "rep movsw") == 0);
+        ASMKIT_CHECK(strcmp(text, "rep movsw es:[edi], [esi]") == 0);
     }
 #endif
 
@@ -207,7 +207,7 @@ static int asmkit_test_x86_rep_string_prefixes(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "repne scasb") == 0);
+        ASMKIT_CHECK(strcmp(text, "repne scasb es:[edi]") == 0);
     }
 #endif
 
@@ -304,7 +304,7 @@ static int asmkit_test_x86_prefix_alias_mnemonics(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "push") == 0);
+        ASMKIT_CHECK(strcmp(text, "push rbx") == 0);
     }
 #endif
 
@@ -430,7 +430,7 @@ static int asmkit_test_x86_prefix_alias_mnemonics(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "jecxz") == 0);
+        ASMKIT_CHECK(strcmp(text, "jecxz 0x1014") == 0);
     }
 #endif
 
@@ -716,7 +716,7 @@ int asmkit_test_decode(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "b.ne") == 0);
+        ASMKIT_CHECK(strcmp(text, "b.ne 0x1074") == 0);
     }
 #endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, a64_ret, sizeof(a64_ret), 0x1000u, &inst) == ASMKIT_OK);
@@ -888,7 +888,7 @@ int asmkit_test_decode(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "bhs") == 0);
+        ASMKIT_CHECK(strcmp(text, "bhs 0x1012") == 0);
     }
 #endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_bne_w, sizeof(thumb_bne_w), 0x1000u, &inst) == ASMKIT_OK);
@@ -903,7 +903,7 @@ int asmkit_test_decode(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "bne") == 0);
+        ASMKIT_CHECK(strcmp(text, "bne 0x11f4") == 0);
     }
 #endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_bl_zero, sizeof(thumb_bl_zero), 0x1000u, &inst) == ASMKIT_OK);
@@ -946,7 +946,7 @@ int asmkit_test_decode(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "cpsid") == 0);
+        ASMKIT_CHECK(strcmp(text, "cpsid i") == 0);
     }
 #endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_cpsie_i, sizeof(thumb_cpsie_i), 0x1000u, &inst) == ASMKIT_OK);
@@ -961,7 +961,7 @@ int asmkit_test_decode(void)
         char text[32];
         ASMKIT_CHECK(asmkit_formatter_init(&formatter, 0u) == ASMKIT_OK);
         ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
-        ASMKIT_CHECK(strcmp(text, "cpsie") == 0);
+        ASMKIT_CHECK(strcmp(text, "cpsie i") == 0);
     }
 #endif
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, thumb_mov_r0_r1, sizeof(thumb_mov_r0_r1), 0x1000u, &inst) == ASMKIT_OK);

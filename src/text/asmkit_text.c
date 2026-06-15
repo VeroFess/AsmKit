@@ -290,6 +290,9 @@ static int asmkit_text_append_arm_cps_mnemonic(
     const char* mnemonic,
     const asmkit_inst_t* inst)
 {
+    int64_t mask;
+    uint32_t wrote_mask;
+
     if (inst->arch != ASMKIT_ARCH_ARM ||
         !asmkit_text_cstr_eq(mnemonic, "cps") ||
         inst->operand_count == 0u ||
@@ -298,13 +301,33 @@ static int asmkit_text_append_arm_cps_mnemonic(
     }
     if (inst->operands[0].imm == 1) {
         asmkit_text_builder_append_cstr(builder, "cpsid");
-        return 1;
-    }
-    if (inst->operands[0].imm == 0) {
+    } else if (inst->operands[0].imm == 0) {
         asmkit_text_builder_append_cstr(builder, "cpsie");
+    } else {
+        return 0;
+    }
+    if (inst->operand_count < 2u || inst->operands[1].kind != ASMKIT_OP_IMM) {
         return 1;
     }
-    return 0;
+    mask = inst->operands[1].imm;
+    wrote_mask = 0u;
+    asmkit_text_builder_append_char(builder, ' ');
+    if ((mask & 4) != 0) {
+        asmkit_text_builder_append_char(builder, 'a');
+        wrote_mask = 1u;
+    }
+    if ((mask & 2) != 0) {
+        asmkit_text_builder_append_char(builder, 'i');
+        wrote_mask = 1u;
+    }
+    if ((mask & 1) != 0) {
+        asmkit_text_builder_append_char(builder, 'f');
+        wrote_mask = 1u;
+    }
+    if (wrote_mask == 0u) {
+        asmkit_text_builder_append_signed_dec(builder, mask);
+    }
+    return 1;
 }
 
 static int asmkit_text_append_arm_rrx_mnemonic(
@@ -445,11 +468,15 @@ static asmkit_status_t asmkit_text_format_with_operands(
     asmkit_text_result_t* out_result)
 {
     asmkit_text_builder_t builder;
+    uint32_t first_operand;
+    int suppress_operands;
 
     builder.out_text = out_text;
     builder.out_capacity = out_capacity;
     builder.required = 0u;
     builder.written = 0u;
+    first_operand = 0u;
+    suppress_operands = 0;
     if (inst->arch == ASMKIT_ARCH_X86 && (inst->flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u) {
         asmkit_text_builder_append_cstr(&builder, "lock ");
     }
@@ -462,20 +489,25 @@ static asmkit_status_t asmkit_text_format_with_operands(
             asmkit_text_builder_append_cstr(&builder, "rep ");
         }
     }
-    if (!asmkit_text_append_arm_cps_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_arm_rrx_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_arm_conditional_branch_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_arm_it_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_aarch64_conditional_mnemonic(&builder, mnemonic, inst) &&
-        !asmkit_text_append_aarch64_bti_mnemonic(&builder, mnemonic, inst)) {
+    if (asmkit_text_append_arm_cps_mnemonic(&builder, mnemonic, inst)) {
+        suppress_operands = 1;
+    } else if (asmkit_text_append_arm_rrx_mnemonic(&builder, mnemonic, inst)) {
+    } else if (asmkit_text_append_arm_conditional_branch_mnemonic(&builder, mnemonic, inst)) {
+    } else if (asmkit_text_append_arm_it_mnemonic(&builder, mnemonic, inst)) {
+        suppress_operands = 1;
+    } else if (asmkit_text_append_aarch64_conditional_mnemonic(&builder, mnemonic, inst)) {
+        first_operand = 1u;
+    } else if (asmkit_text_append_aarch64_bti_mnemonic(&builder, mnemonic, inst)) {
+        suppress_operands = 1;
+    } else {
         asmkit_text_builder_append_cstr(&builder, mnemonic);
     }
 #if ASMKIT_TEXT_ENABLE_OPERANDS
-    if (inst->arch == ASMKIT_ARCH_BPF && inst->operand_count > 0u) {
+    if (!suppress_operands && inst->operand_count > first_operand) {
         uint32_t i;
         asmkit_text_builder_append_char(&builder, ' ');
-        for (i = 0u; i < inst->operand_count && i < ASMKIT_MAX_OPERANDS; ++i) {
-            if (i != 0u) {
+        for (i = first_operand; i < inst->operand_count && i < ASMKIT_MAX_OPERANDS; ++i) {
+            if (i != first_operand) {
                 asmkit_text_builder_append_cstr(&builder, ", ");
             }
             asmkit_text_append_operand(&builder, inst, &inst->operands[i]);

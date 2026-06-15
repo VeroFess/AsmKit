@@ -29,6 +29,7 @@ int asmkit_test_easy_api(void)
     asmkit_text_result_t text_result;
     uint8_t out[32];
     char text[64];
+    uint8_t x86_mov_rax_rbx[] = {0x48u, 0x89u, 0xd8u};
     uint8_t x86_nop[] = {0x90u};
     uint8_t bpf_add_ri[] = {0x07u, 0x01u, 0x00u, 0x00u, 0x05u, 0x00u, 0x00u, 0x00u};
 
@@ -125,6 +126,9 @@ int asmkit_test_easy_api(void)
     ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
     ASMKIT_CHECK(text_result.written > 0u);
     ASMKIT_CHECK(text[0] != '\0');
+    ASMKIT_CHECK(asmkit_decode_full(ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, x86_mov_rax_rbx, sizeof(x86_mov_rax_rbx), 0u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_test_easy_cstr_eq(text, "mov rax, rbx"));
     ASMKIT_CHECK(asmkit_decode_full(ASMKIT_ARCH_BPF, ASMKIT_MODE_BPF64, bpf_add_ri, sizeof(bpf_add_ri), 0u, &inst) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_formatter_format_inst(&formatter, &inst, text, sizeof(text), &text_result) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_test_easy_cstr_eq(text, "add r1, 5"));
