@@ -22,6 +22,30 @@ ASMKIT 目前是 `1.0.0` 前版本。公开 C ABI 在 `1.0.0` 前可能变化。
 | AArch64 / arm64 exports | 48 | 51,522 | 3,288,230 | 0 |
 | 总计 | 191 | 203,474 | 13,331,267 | 0 |
 
+## 解码性能
+
+[`tests/performance`](tests/performance) 里的 benchmark 只测解码吞吐，不调用
+任何文本格式化路径。对比项使用 Zydis full decode、Capstone detail mode，以及
+一个返回结构化指令数据的 yaxpeax-x86 C ABI shim。
+
+下面的数据来自本机 Release 构建，Clang `-O3` + full LTO，运行参数为
+`--benchmark_min_time=1s --benchmark_repetitions=5`。时间越低越好。
+
+| 负载 | ASMKIT | Zydis Full | Capstone Detail | yaxpeax Full |
+|---|---:|---:|---:|---:|
+| x86-64 mixed | 697 ns | 898 ns | 2,324 ns | 752 ns |
+| x86-32 mixed | 633 ns | 809 ns | 2,080 ns | 757 ns |
+
+非 x86 负载使用同一个 benchmark 与 Capstone 对比：
+
+| 负载 | ASMKIT | Capstone Detail |
+|---|---:|---:|
+| AArch64 mixed | 1,053 ns | 5,313 ns |
+| ARM A32 mixed | 510 ns | 624 ns |
+| ARM Thumb mixed | 1,177 ns | 1,749 ns |
+| BPF64 mixed | 167 ns | 871 ns |
+| WASM32 mixed | 118 ns | 436 ns |
+
 语言：[English](README.md)
 
 ## 项目目标

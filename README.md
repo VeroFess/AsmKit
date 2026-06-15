@@ -23,6 +23,31 @@ functions from `ntoskrnl.exe` and Debian ELF shared libraries: `libaom`,
 | AArch64 / arm64 exports | 48 | 51,522 | 3,288,230 | 0 |
 | Total | 191 | 203,474 | 13,331,267 | 0 |
 
+## Decode performance
+
+The benchmark in [`tests/performance`](tests/performance) measures decode
+throughput only; no formatter is called. The comparison uses Zydis full decode,
+Capstone detail mode, and a yaxpeax-x86 C ABI shim that returns structured
+instruction data.
+
+These numbers are from a local Release build with Clang `-O3` and full LTO,
+using `--benchmark_min_time=1s --benchmark_repetitions=5`. Lower is better.
+
+| Workload | ASMKIT | Zydis Full | Capstone Detail | yaxpeax Full |
+|---|---:|---:|---:|---:|
+| x86-64 mixed | 697 ns | 898 ns | 2,324 ns | 752 ns |
+| x86-32 mixed | 633 ns | 809 ns | 2,080 ns | 757 ns |
+
+For the non-x86 workloads, the same benchmark compares ASMKIT with Capstone:
+
+| Workload | ASMKIT | Capstone Detail |
+|---|---:|---:|
+| AArch64 mixed | 1,053 ns | 5,313 ns |
+| ARM A32 mixed | 510 ns | 624 ns |
+| ARM Thumb mixed | 1,177 ns | 1,749 ns |
+| BPF64 mixed | 167 ns | 871 ns |
+| WASM32 mixed | 118 ns | 436 ns |
+
 Language: [简体中文](README.zh-cn.md)
 
 ## Why this exists
