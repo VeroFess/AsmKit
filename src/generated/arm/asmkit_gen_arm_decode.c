@@ -146,7 +146,632 @@ typedef struct asmkit_arm_td_record {
 
 #include "asmkit_gen_arm_decode_asmkit_arm_a32_records.inc"
 
+typedef struct asmkit_arm_a32_td_bucket_range {
+    uint32_t key;
+    uint32_t first;
+    uint32_t count;
+} asmkit_arm_a32_td_bucket_range_t;
+
+typedef struct asmkit_arm_a32_td_subbucket_desc {
+    uint32_t mask;
+    uint32_t first;
+    uint32_t count;
+    uint32_t fallback_first;
+    uint32_t fallback_count;
+} asmkit_arm_a32_td_subbucket_desc_t;
+
+#define ASMKIT_ARM_A32_TD_BUCKET_MASK UINT32_C(0x07300000)
+
+#include "asmkit_gen_arm_decode_asmkit_arm_a32_bucket_indices.inc"
+
+static const asmkit_arm_a32_td_bucket_range_t asmkit_arm_a32_td_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 10u}, {UINT32_C(0x00100000), 10u, 9u}, {UINT32_C(0x00200000), 19u, 9u}, {UINT32_C(0x00300000), 28u, 12u}, {UINT32_C(0x01000000), 40u, 40u}, {UINT32_C(0x01100000), 80u, 22u}, {UINT32_C(0x01200000), 102u, 38u}, {UINT32_C(0x01300000), 140u, 20u},
+    {UINT32_C(0x02000000), 160u, 87u}, {UINT32_C(0x02100000), 247u, 106u}, {UINT32_C(0x02200000), 353u, 88u}, {UINT32_C(0x02300000), 441u, 34u}, {UINT32_C(0x03000000), 475u, 88u}, {UINT32_C(0x03100000), 563u, 105u}, {UINT32_C(0x03200000), 668u, 85u}, {UINT32_C(0x03300000), 753u, 302u},
+    {UINT32_C(0x04000000), 1055u, 151u}, {UINT32_C(0x04100000), 1206u, 16u}, {UINT32_C(0x04200000), 1222u, 225u}, {UINT32_C(0x04300000), 1447u, 19u}, {UINT32_C(0x05000000), 1466u, 15u}, {UINT32_C(0x05100000), 1481u, 17u}, {UINT32_C(0x05200000), 1498u, 15u}, {UINT32_C(0x05300000), 1513u, 20u},
+    {UINT32_C(0x06000000), 1533u, 40u}, {UINT32_C(0x06100000), 1573u, 34u}, {UINT32_C(0x06200000), 1607u, 52u}, {UINT32_C(0x06300000), 1659u, 175u}, {UINT32_C(0x07000000), 1834u, 16u}, {UINT32_C(0x07100000), 1850u, 11u}, {UINT32_C(0x07200000), 1861u, 2u}, {UINT32_C(0x07300000), 1863u, 5u},
+};
+
+#define ASMKIT_ARM_A32_TD_FALLBACK_BUCKET_MASK UINT32_C(0x0f000000)
+
+static const uint32_t asmkit_arm_a32_td_fallback_bucket_indices[] = {
+    1673u, 1674u, 1675u, 1677u, 1687u, 1688u, 1689u, 1691u, 1871u, 1874u, 1878u, 1879u, 1887u, 1888u, 1929u, 1930u,
+    1931u, 1936u, 1939u, 1940u, 1941u, 1943u, 1947u, 1948u, 1949u, 1954u, 1979u, 1980u, 1981u, 2000u, 572u, 1676u,
+    1681u, 1682u, 1683u, 1723u, 1770u, 1932u, 1937u, 1938u, 1950u, 1977u, 1978u, 972u, 974u, 976u, 977u, 1305u,
+    1308u, 1309u, 1330u, 1384u, 1385u, 1386u, 1393u, 1394u, 1417u, 1419u, 1420u, 1437u, 1438u, 1439u, 1445u, 1446u,
+    1576u, 1578u, 1580u, 1581u, 1616u, 1617u, 1622u, 1623u, 1626u, 1627u, 1631u, 1632u, 1633u, 1634u, 1639u, 1640u,
+    2019u, 2020u, 2021u, 2024u, 2040u, 2041u, 2042u, 2057u, 973u, 975u, 978u, 979u, 1306u, 1307u, 1310u, 1311u,
+    1320u, 1321u, 1331u, 1332u, 1387u, 1388u, 1395u, 1396u, 1418u, 1440u, 1441u, 1442u, 1443u, 1447u, 1448u, 1449u,
+    1450u, 1577u, 1579u, 1582u, 1583u, 1618u, 1619u, 1620u, 1621u, 1624u, 1625u, 1628u, 1629u, 1635u, 1636u, 1637u,
+    1638u, 1641u, 1642u, 1643u, 1644u, 1872u, 1875u, 2022u, 2039u, 1942u, 1946u, 1713u, 1896u, 1913u, 1922u, 2062u,
+    1951u, 2061u, 666u, 741u, 1004u, 1005u, 1416u, 1586u, 1587u, 1630u, 1693u, 1695u, 1697u, 1699u, 1911u, 1912u,
+    1933u, 2058u, 2059u, 2060u, 2063u,
+};
+
+static const asmkit_arm_a32_td_bucket_range_t asmkit_arm_a32_td_fallback_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 30u}, {UINT32_C(0x01000000), 30u, 13u}, {UINT32_C(0x02000000), 43u, 45u}, {UINT32_C(0x03000000), 88u, 49u}, {UINT32_C(0x06000000), 137u, 2u}, {UINT32_C(0x07000000), 139u, 4u}, {UINT32_C(0x0a000000), 143u, 1u}, {UINT32_C(0x0b000000), 144u, 2u},
+    {UINT32_C(0x0e000000), 146u, 18u}, {UINT32_C(0x0f000000), 164u, 1u},
+};
+
+#define ASMKIT_ARM_A32_TD_BUCKET_FALLBACK2_COUNT 31u
+
+static const uint32_t asmkit_arm_a32_td_bucket_fallback2_indices[] = {
+    1u, 5u, 595u, 596u, 597u, 598u, 599u, 648u, 649u, 702u, 703u, 704u, 705u, 709u, 710u, 921u,
+    922u, 1206u, 1207u, 1572u, 1573u, 1574u, 1575u, 1692u, 1694u, 1696u, 1698u, 1708u, 1709u, 1710u, 2023u,
+};
+
+#include "asmkit_gen_arm_decode_asmkit_arm_a32_subbucket_indices.inc"
+
+#include "asmkit_gen_arm_decode_asmkit_arm_a32_subbuckets.inc"
+
+static const uint32_t asmkit_arm_a32_td_subbucket_fallback_indices[] = {
+    1900u, 1915u, 1918u, 1903u, 1906u, 1909u, 30u, 61u, 643u, 1899u, 1914u, 1917u, 1986u, 1990u, 2013u, 2017u,
+    1902u, 1905u, 1908u, 1987u, 1991u, 2014u, 2018u, 1904u, 1907u, 1910u, 1895u, 1715u, 1731u, 1974u, 1975u, 1953u,
+    2002u, 531u, 1873u, 1952u, 2001u, 1768u, 1823u, 1824u, 1973u, 1982u, 1983u, 2050u, 2054u, 561u, 621u, 1686u,
+    1854u, 1890u, 2032u, 2036u, 1881u, 1884u, 2044u, 2047u, 2049u, 2053u, 916u, 918u, 1855u, 1891u, 1926u, 1927u,
+    1928u, 1923u, 1924u, 1925u, 1856u, 1892u, 1853u, 1889u, 1993u, 1997u, 1541u, 1966u, 1970u, 1992u, 1996u, 917u,
+    919u, 1410u, 1411u, 1412u, 1562u, 1571u, 1678u, 1679u, 1680u, 1725u, 1726u, 1727u, 1762u, 1763u, 1764u, 1786u,
+    1787u, 1788u, 1789u, 1790u, 1791u, 1829u, 1833u, 1834u, 1835u, 1836u, 1837u, 1838u, 1852u, 1965u, 1969u, 1995u,
+    1999u, 2019u, 2020u, 2021u, 2024u, 2040u, 2041u, 2042u, 2057u, 1872u, 1875u, 2022u, 2039u, 5u, 1708u, 1709u,
+    1710u, 2023u,
+};
+
+static const asmkit_arm_a32_td_subbucket_desc_t asmkit_arm_a32_td_bucket_subdescs[] = {
+    {UINT32_C(0x0fc00000), 0u, 5u, 0u, 3u}, {UINT32_C(0x03f00000), 5u, 4u, 3u, 3u}, {UINT32_C(0x08400000), 9u, 4u, 6u, 0u}, {UINT32_C(0x08400000), 13u, 4u, 6u, 0u},
+    {UINT32_C(0x00c000e0), 17u, 17u, 6u, 10u}, {UINT32_C(0x08c00000), 34u, 8u, 16u, 3u}, {UINT32_C(0x080000e0), 42u, 9u, 19u, 4u}, {UINT32_C(0x08c00000), 51u, 8u, 23u, 3u},
+    {UINT32_C(0x00800b50), 59u, 50u, 26u, 1u}, {UINT32_C(0x00800b50), 109u, 60u, 27u, 0u}, {UINT32_C(0x00800f50), 169u, 88u, 27u, 0u}, {UINT32_C(0x00800150), 257u, 10u, 27u, 2u},
+    {UINT32_C(0x00800b50), 267u, 50u, 29u, 2u}, {UINT32_C(0x00800b50), 317u, 58u, 31u, 2u}, {UINT32_C(0x00000f50), 375u, 59u, 33u, 2u}, {UINT32_C(0x00000f50), 434u, 45u, 35u, 2u},
+    {UINT32_C(0x08800f00), 479u, 29u, 37u, 8u}, {UINT32_C(0x00c00000), 508u, 3u, 45u, 7u}, {UINT32_C(0x08000f00), 511u, 22u, 52u, 6u}, {UINT32_C(0x08400000), 533u, 4u, 58u, 4u},
+    {UINT32_C(0x08400000), 537u, 4u, 62u, 3u}, {UINT32_C(0x08400000), 541u, 4u, 65u, 3u}, {UINT32_C(0x08400000), 545u, 4u, 68u, 2u}, {UINT32_C(0x08400000), 549u, 4u, 70u, 2u},
+    {UINT32_C(0x00800050), 553u, 8u, 72u, 2u}, {UINT32_C(0x00000050), 561u, 4u, 74u, 3u}, {UINT32_C(0x08800010), 565u, 6u, 77u, 2u}, {UINT32_C(0x000f0310), 571u, 61u, 79u, 32u},
+    {UINT32_C(0x00c00060), 632u, 9u, 111u, 2u}, {UINT32_C(0x00400010), 641u, 4u, 113u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u},
+};
+
+static const asmkit_arm_a32_td_subbucket_desc_t asmkit_arm_a32_td_fallback_bucket_subdescs[] = {
+    {UINT32_C(0x00e00010), 645u, 16u, 113u, 0u}, {UINT32_C(0x00600010), 661u, 8u, 113u, 0u}, {UINT32_C(0x00000fc0), 669u, 37u, 113u, 8u}, {UINT32_C(0x00000fc0), 706u, 45u, 121u, 4u},
+    {UINT32_C(0x00000000), 645u, 0u, 113u, 0u}, {UINT32_C(0x00000000), 645u, 0u, 113u, 0u}, {UINT32_C(0x00000000), 645u, 0u, 113u, 0u}, {UINT32_C(0x00000000), 645u, 0u, 113u, 0u},
+    {UINT32_C(0x00000010), 751u, 2u, 125u, 0u}, {UINT32_C(0x00000000), 645u, 0u, 113u, 0u},
+};
+
+static const asmkit_arm_a32_td_subbucket_desc_t asmkit_arm_a32_td_bucket_fallback2_subdesc = {UINT32_C(0x00000950), 753u, 8u, 125u, 5u};
+
+static const asmkit_arm_a32_td_bucket_range_t* arm_a32_td_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_A32_TD_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_a32_td_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_a32_td_bucket_range_t* bucket = &asmkit_arm_a32_td_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_a32_td_buckets) && asmkit_arm_a32_td_buckets[lo].key == key) {
+        return &asmkit_arm_a32_td_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_a32_td_bucket_range_t* arm_a32_td_fallback_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_A32_TD_FALLBACK_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_a32_td_fallback_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_a32_td_bucket_range_t* bucket = &asmkit_arm_a32_td_fallback_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_a32_td_fallback_buckets) && asmkit_arm_a32_td_fallback_buckets[lo].key == key) {
+        return &asmkit_arm_a32_td_fallback_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_a32_td_bucket_range_t* arm_a32_td_subbucket(uint32_t word, const asmkit_arm_a32_td_subbucket_desc_t* desc)
+{
+    uint32_t key;
+    uint32_t lo;
+    uint32_t hi;
+    if (desc->mask == 0u || desc->count == 0u) {
+        return 0;
+    }
+    key = word & desc->mask;
+    lo = desc->first;
+    hi = desc->first + desc->count;
+    while (lo < hi) {
+        uint32_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_a32_td_bucket_range_t* bucket = &asmkit_arm_a32_td_subbuckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < desc->first + desc->count && asmkit_arm_a32_td_subbuckets[lo].key == key) {
+        return &asmkit_arm_a32_td_subbuckets[lo];
+    }
+    return 0;
+}
+
+
 #include "asmkit_gen_arm_decode_asmkit_arm_thumb_records.inc"
+
+typedef struct asmkit_arm_thumb4_td_bucket_range {
+    uint32_t key;
+    uint32_t first;
+    uint32_t count;
+} asmkit_arm_thumb4_td_bucket_range_t;
+
+typedef struct asmkit_arm_thumb4_td_subbucket_desc {
+    uint32_t mask;
+    uint32_t first;
+    uint32_t count;
+    uint32_t fallback_first;
+    uint32_t fallback_count;
+} asmkit_arm_thumb4_td_subbucket_desc_t;
+
+#define ASMKIT_ARM_THUMB4_TD_BUCKET_MASK UINT32_C(0x13200000)
+
+static const uint32_t asmkit_arm_thumb4_td_bucket_indices[] = {
+    38u, 44u, 312u, 313u, 314u, 315u, 316u, 317u, 318u, 319u, 320u, 321u, 322u, 324u, 325u, 326u,
+    327u, 328u, 329u, 393u, 394u, 400u, 401u, 410u, 411u, 412u, 413u, 414u, 415u, 416u, 417u, 418u,
+    419u, 420u, 826u, 827u, 875u, 876u, 877u, 878u, 879u, 915u, 916u, 1036u, 1060u, 1095u, 1097u, 1152u,
+    1179u, 1180u, 1183u, 1190u, 1194u, 1201u, 1202u, 1204u, 39u, 45u, 956u, 959u, 970u, 983u, 986u, 991u,
+    1015u, 1018u, 1021u, 1024u, 1027u, 1030u, 1153u, 1157u, 1161u, 1184u, 1240u, 1243u, 1245u, 1261u, 1264u, 1266u,
+    40u, 46u, 955u, 958u, 969u, 982u, 985u, 990u, 1014u, 1017u, 1020u, 1023u, 1026u, 1029u, 1150u, 1181u,
+    1239u, 1242u, 1247u, 1260u, 1263u, 1268u, 19u, 41u, 47u, 957u, 960u, 971u, 984u, 987u, 992u, 1016u,
+    1019u, 1022u, 1025u, 1028u, 1031u, 1151u, 1156u, 1160u, 1182u, 1241u, 1244u, 1246u, 1262u, 1265u, 1267u, 158u,
+    159u, 330u, 331u, 332u, 333u, 344u, 346u, 347u, 349u, 382u, 384u, 385u, 386u, 387u, 388u, 429u,
+    430u, 431u, 432u, 433u, 434u, 438u, 440u, 447u, 449u, 451u, 452u, 462u, 463u, 476u, 477u, 478u,
+    479u, 481u, 497u, 499u, 514u, 516u, 526u, 528u, 538u, 540u, 550u, 552u, 581u, 583u, 584u, 586u,
+    601u, 603u, 609u, 611u, 617u, 619u, 625u, 627u, 648u, 650u, 660u, 662u, 663u, 665u, 666u, 668u,
+    669u, 671u, 678u, 680u, 692u, 694u, 695u, 697u, 698u, 700u, 701u, 703u, 722u, 724u, 737u, 739u,
+    741u, 742u, 743u, 745u, 771u, 773u, 800u, 801u, 808u, 810u, 912u, 914u, 938u, 941u, 945u, 997u,
+    1004u, 1005u, 1007u, 1054u, 1055u, 1056u, 1057u, 1101u, 1103u, 1148u, 1149u, 1173u, 1176u, 1197u, 48u, 49u,
+    50u, 51u, 52u, 53u, 96u, 97u, 98u, 100u, 102u, 103u, 104u, 105u, 109u, 110u, 111u, 113u,
+    115u, 116u, 117u, 118u, 183u, 184u, 211u, 212u, 213u, 214u, 215u, 216u, 218u, 219u, 220u, 221u,
+    223u, 224u, 225u, 226u, 227u, 245u, 246u, 247u, 248u, 253u, 254u, 255u, 256u, 260u, 261u, 262u,
+    266u, 267u, 268u, 290u, 291u, 292u, 296u, 297u, 298u, 299u, 304u, 305u, 306u, 345u, 348u, 350u,
+    351u, 352u, 356u, 357u, 358u, 359u, 360u, 361u, 365u, 366u, 367u, 368u, 369u, 371u, 372u, 374u,
+    375u, 377u, 378u, 391u, 392u, 424u, 457u, 458u, 480u, 493u, 494u, 496u, 498u, 515u, 519u, 521u,
+    527u, 539u, 551u, 582u, 585u, 602u, 608u, 610u, 616u, 618u, 624u, 626u, 649u, 661u, 664u, 667u,
+    670u, 679u, 684u, 685u, 688u, 689u, 693u, 696u, 699u, 702u, 744u, 772u, 789u, 790u, 807u, 809u,
+    913u, 931u, 940u, 944u, 953u, 978u, 979u, 1132u, 1175u, 1196u, 5u, 380u, 445u, 455u, 461u, 464u,
+    487u, 489u, 500u, 501u, 502u, 504u, 505u, 506u, 522u, 523u, 532u, 534u, 544u, 546u, 555u, 557u,
+    563u, 565u, 630u, 632u, 654u, 656u, 681u, 683u, 716u, 718u, 729u, 731u, 735u, 749u, 751u, 755u,
+    757u, 777u, 779u, 785u, 793u, 795u, 799u, 802u, 995u, 996u, 1008u, 1051u, 1226u, 1228u, 1251u, 2u,
+    381u, 488u, 503u, 510u, 512u, 524u, 525u, 533u, 545u, 556u, 564u, 631u, 633u, 634u, 655u, 682u,
+    717u, 730u, 750u, 756u, 778u, 794u, 811u, 812u, 908u, 910u, 927u, 929u, 932u, 933u, 1009u, 1013u,
+    1053u, 1253u, 1270u, 8u, 21u, 24u, 25u, 28u, 32u, 60u, 62u, 64u, 66u, 68u, 70u, 72u,
+    74u, 76u, 78u, 80u, 82u, 84u, 86u, 88u, 90u, 92u, 94u, 122u, 124u, 126u, 128u, 130u,
+    132u, 134u, 136u, 138u, 140u, 142u, 144u, 146u, 148u, 150u, 152u, 154u, 156u, 395u, 396u, 397u,
+    398u, 399u, 402u, 403u, 404u, 405u, 406u, 407u, 426u, 428u, 469u, 832u, 946u, 999u, 1003u, 1010u,
+    1012u, 1032u, 1035u, 1043u, 1059u, 1064u, 1068u, 1096u, 1099u, 1100u, 1102u, 1110u, 1111u, 1112u, 1113u, 1126u,
+    1127u, 1128u, 1129u, 1130u, 1133u, 1134u, 1135u, 1139u, 1140u, 1141u, 1177u, 1178u, 1185u, 1189u, 1191u, 1195u,
+    1199u, 1200u, 1203u, 1206u, 1229u, 1232u, 1249u, 22u, 23u, 26u, 27u, 61u, 63u, 65u, 67u, 69u,
+    71u, 73u, 75u, 77u, 79u, 81u, 83u, 85u, 87u, 89u, 91u, 93u, 95u, 123u, 125u, 127u,
+    129u, 131u, 133u, 135u, 137u, 139u, 141u, 143u, 145u, 147u, 149u, 151u, 153u, 155u, 157u, 425u,
+    468u, 831u, 962u, 965u, 973u, 1000u, 1011u, 1033u, 1034u, 1061u, 1067u, 1098u, 1114u, 1115u, 1116u, 1117u,
+    1131u, 1136u, 1137u, 1138u, 1155u, 1159u, 1186u, 1205u, 1231u, 1234u, 1237u, 1248u, 1255u, 1258u, 427u, 833u,
+    937u, 947u, 961u, 964u, 967u, 972u, 975u, 988u, 993u, 1001u, 1050u, 1062u, 1069u, 1118u, 1119u, 1120u,
+    1121u, 1187u, 1225u, 1227u, 1233u, 1236u, 1250u, 1254u, 1257u, 949u, 963u, 966u, 968u, 974u, 976u, 989u,
+    994u, 1002u, 1052u, 1063u, 1122u, 1123u, 1124u, 1125u, 1154u, 1158u, 1188u, 1235u, 1238u, 1252u, 1256u, 1259u,
+    1269u, 171u, 172u, 175u, 176u, 177u, 178u, 181u, 182u, 338u, 339u, 342u, 343u, 439u, 441u, 442u,
+    443u, 448u, 450u, 453u, 454u, 470u, 472u, 473u, 475u, 482u, 484u, 507u, 509u, 529u, 531u, 541u,
+    543u, 604u, 606u, 612u, 614u, 620u, 622u, 636u, 637u, 638u, 639u, 644u, 645u, 646u, 647u, 651u,
+    653u, 672u, 674u, 675u, 677u, 704u, 706u, 707u, 709u, 710u, 712u, 723u, 725u, 726u, 727u, 738u,
+    740u, 746u, 748u, 774u, 776u, 783u, 784u, 816u, 820u, 821u, 822u, 823u, 824u, 825u, 834u, 835u,
+    836u, 838u, 839u, 841u, 842u, 843u, 844u, 845u, 846u, 847u, 848u, 849u, 853u, 854u, 857u, 858u,
+    873u, 874u, 881u, 882u, 885u, 886u, 889u, 890u, 891u, 892u, 895u, 896u, 900u, 901u, 905u, 907u,
+    920u, 921u, 924u, 925u, 939u, 942u, 1037u, 1039u, 1040u, 1042u, 1172u, 1192u, 1193u, 9u, 29u, 54u,
+    55u, 56u, 57u, 58u, 59u, 99u, 101u, 106u, 107u, 108u, 112u, 114u, 119u, 120u, 121u, 173u,
+    174u, 179u, 180u, 187u, 188u, 217u, 222u, 228u, 229u, 230u, 231u, 232u, 233u, 234u, 235u, 249u,
+    250u, 251u, 252u, 263u, 264u, 265u, 269u, 270u, 271u, 293u, 294u, 295u, 300u, 301u, 302u, 303u,
+    307u, 308u, 309u, 340u, 341u, 353u, 354u, 355u, 362u, 363u, 364u, 370u, 373u, 376u, 379u, 389u,
+    390u, 459u, 460u, 471u, 474u, 483u, 495u, 508u, 518u, 520u, 530u, 542u, 605u, 607u, 613u, 615u,
+    621u, 623u, 635u, 640u, 641u, 642u, 643u, 652u, 673u, 676u, 686u, 687u, 690u, 691u, 705u, 708u,
+    711u, 747u, 775u, 787u, 788u, 791u, 792u, 806u, 819u, 837u, 840u, 850u, 852u, 855u, 856u, 872u,
+    880u, 883u, 887u, 888u, 893u, 894u, 899u, 906u, 922u, 923u, 943u, 948u, 954u, 980u, 981u, 1038u,
+    1041u, 1207u, 13u, 14u, 15u, 30u, 323u, 383u, 423u, 444u, 446u, 456u, 465u, 466u, 467u, 490u,
+    492u, 517u, 535u, 537u, 547u, 549u, 553u, 554u, 558u, 560u, 566u, 568u, 628u, 629u, 657u, 659u,
+    713u, 715u, 719u, 721u, 728u, 732u, 734u, 736u, 752u, 754u, 758u, 760u, 780u, 782u, 786u, 796u,
+    798u, 803u, 804u, 805u, 813u, 815u, 817u, 818u, 829u, 851u, 859u, 860u, 863u, 864u, 865u, 866u,
+    869u, 870u, 1006u, 1065u, 1066u, 1071u, 1072u, 1075u, 1076u, 1077u, 1078u, 1079u, 1080u, 1081u, 1082u, 1083u,
+    1086u, 1087u, 1088u, 1089u, 1090u, 1091u, 1094u, 1198u, 1208u, 0u, 1u, 4u, 10u, 11u, 12u, 16u,
+    17u, 18u, 20u, 31u, 33u, 34u, 35u, 36u, 37u, 42u, 43u, 160u, 161u, 162u, 163u, 164u,
+    165u, 166u, 167u, 168u, 169u, 170u, 185u, 186u, 189u, 190u, 191u, 192u, 193u, 194u, 195u, 196u,
+    197u, 198u, 199u, 200u, 201u, 202u, 203u, 204u, 205u, 206u, 207u, 208u, 209u, 210u, 236u, 237u,
+    238u, 239u, 240u, 241u, 242u, 243u, 244u, 257u, 258u, 259u, 272u, 273u, 274u, 275u, 276u, 277u,
+    278u, 279u, 280u, 281u, 282u, 283u, 284u, 285u, 286u, 287u, 288u, 289u, 421u, 422u, 485u, 486u,
+    491u, 511u, 513u, 536u, 548u, 559u, 561u, 562u, 567u, 658u, 714u, 720u, 733u, 753u, 759u, 781u,
+    797u, 814u, 828u, 830u, 861u, 862u, 867u, 868u, 871u, 884u, 897u, 898u, 909u, 911u, 926u, 928u,
+    930u, 934u, 935u, 936u, 998u, 1058u, 1070u, 1073u, 1074u, 1084u, 1085u, 1092u, 1093u, 1104u, 1105u, 1106u,
+    1107u, 1108u, 1147u,
+};
+
+static const asmkit_arm_thumb4_td_bucket_range_t asmkit_arm_thumb4_td_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 56u}, {UINT32_C(0x00200000), 56u, 24u}, {UINT32_C(0x01000000), 80u, 22u}, {UINT32_C(0x01200000), 102u, 25u}, {UINT32_C(0x02000000), 127u, 111u}, {UINT32_C(0x02200000), 238u, 140u}, {UINT32_C(0x03000000), 378u, 53u}, {UINT32_C(0x03200000), 431u, 36u},
+    {UINT32_C(0x10000000), 467u, 100u}, {UINT32_C(0x10200000), 567u, 71u}, {UINT32_C(0x11000000), 638u, 27u}, {UINT32_C(0x11200000), 665u, 24u}, {UINT32_C(0x12000000), 689u, 124u}, {UINT32_C(0x12200000), 813u, 133u}, {UINT32_C(0x13000000), 946u, 87u}, {UINT32_C(0x13200000), 1033u, 138u},
+};
+
+#define ASMKIT_ARM_THUMB4_TD_FALLBACK_BUCKET_MASK UINT32_C(0x10000000)
+
+static const uint32_t asmkit_arm_thumb4_td_fallback_bucket_indices[] = {
+    334u, 335u, 408u, 409u, 435u, 436u, 437u, 569u, 570u, 573u, 574u, 575u, 576u, 579u, 580u, 587u,
+    588u, 589u, 590u, 591u, 592u, 593u, 594u, 595u, 596u, 597u, 761u, 763u, 764u, 766u, 1045u, 1047u,
+    1145u, 1164u, 1166u, 1168u, 1170u, 1217u, 1219u, 1223u, 1224u, 1272u, 1274u, 1301u, 7u, 310u, 311u, 336u,
+    337u, 571u, 572u, 577u, 578u, 762u, 765u, 767u, 768u, 769u, 770u, 903u, 904u, 951u, 952u, 1044u,
+    1046u, 1144u, 1146u, 1162u, 1163u, 1165u, 1167u, 1169u, 1171u, 1174u, 1218u, 1220u, 1221u, 1222u, 1230u, 1271u,
+    1273u, 1275u, 1302u, 1305u, 1306u, 1307u,
+};
+
+static const asmkit_arm_thumb4_td_bucket_range_t asmkit_arm_thumb4_td_fallback_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 44u}, {UINT32_C(0x10000000), 44u, 42u},
+};
+
+#define ASMKIT_ARM_THUMB4_TD_BUCKET_FALLBACK2_COUNT 13u
+
+static const uint32_t asmkit_arm_thumb4_td_bucket_fallback2_indices[] = {
+    3u, 6u, 598u, 599u, 600u, 902u, 917u, 918u, 919u, 950u, 977u, 1048u, 1049u,
+};
+
+static const uint32_t asmkit_arm_thumb4_td_subbucket_indices[] = {
+    44u, 326u, 327u, 328u, 329u, 1204u, 38u, 1060u, 320u, 321u, 322u, 875u, 876u, 877u, 878u, 879u,
+    1095u, 1097u, 1152u, 312u, 313u, 314u, 315u, 316u, 317u, 318u, 319u, 324u, 325u, 826u, 827u, 1036u,
+    1183u, 916u, 1190u, 915u, 1194u, 410u, 411u, 412u, 413u, 414u, 415u, 416u, 417u, 418u, 419u, 420u,
+    1201u, 1202u, 393u, 394u, 400u, 401u, 1179u, 1180u, 45u, 1153u, 1266u, 39u, 1184u, 1245u, 983u, 986u,
+    991u, 1024u, 1027u, 1030u, 1157u, 1261u, 1264u, 956u, 959u, 970u, 1015u, 1018u, 1021u, 1161u, 1240u, 1243u,
+    46u, 1150u, 40u, 1181u, 1268u, 1247u, 982u, 985u, 990u, 1023u, 1026u, 1029u, 1263u, 955u, 958u, 969u,
+    1014u, 1017u, 1020u, 1242u, 1260u, 1239u, 47u, 1151u, 1267u, 19u, 41u, 1182u, 1246u, 984u, 987u, 992u,
+    1025u, 1028u, 1031u, 1156u, 1262u, 1265u, 957u, 960u, 971u, 1016u, 1019u, 1022u, 1160u, 1241u, 1244u, 158u,
+    159u, 331u, 332u, 386u, 387u, 388u, 429u, 431u, 432u, 433u, 476u, 477u, 330u, 333u, 430u, 434u,
+    478u, 385u, 583u, 586u, 603u, 611u, 619u, 627u, 662u, 665u, 668u, 671u, 680u, 694u, 697u, 700u,
+    703u, 773u, 346u, 349u, 499u, 516u, 528u, 540u, 552u, 650u, 745u, 810u, 914u, 581u, 584u, 601u,
+    609u, 617u, 625u, 660u, 663u, 666u, 669u, 678u, 692u, 695u, 698u, 701u, 771u, 344u, 347u, 497u,
+    514u, 526u, 538u, 550u, 648u, 743u, 808u, 912u, 438u, 440u, 447u, 449u, 451u, 452u, 462u, 463u,
+    481u, 479u, 722u, 724u, 737u, 739u, 741u, 742u, 800u, 801u, 602u, 610u, 618u, 661u, 664u, 693u,
+    696u, 772u, 582u, 585u, 626u, 667u, 670u, 679u, 699u, 702u, 913u, 345u, 348u, 498u, 515u, 527u,
+    539u, 551u, 649u, 744u, 809u, 183u, 184u, 214u, 215u, 216u, 218u, 219u, 220u, 221u, 223u, 245u,
+    246u, 247u, 248u, 253u, 254u, 255u, 256u, 296u, 297u, 298u, 299u, 608u, 616u, 953u, 260u, 261u,
+    262u, 266u, 267u, 268u, 290u, 291u, 292u, 304u, 305u, 306u, 519u, 521u, 624u, 391u, 493u, 494u,
+    688u, 689u, 978u, 392u, 496u, 684u, 685u, 807u, 979u, 96u, 97u, 98u, 100u, 102u, 103u, 104u,
+    105u, 109u, 110u, 111u, 113u, 115u, 116u, 117u, 118u, 211u, 212u, 213u, 480u, 226u, 227u, 457u,
+    458u, 350u, 351u, 356u, 357u, 359u, 360u, 365u, 366u, 368u, 369u, 371u, 372u, 374u, 375u, 377u,
+    378u, 48u, 49u, 50u, 51u, 52u, 53u, 352u, 358u, 361u, 367u, 224u, 225u, 789u, 790u, 504u,
+    534u, 656u, 757u, 505u, 632u, 546u, 751u, 683u, 795u, 523u, 731u, 501u, 779u, 718u, 557u, 565u,
+    489u, 502u, 532u, 654u, 755u, 506u, 630u, 544u, 749u, 681u, 793u, 522u, 729u, 500u, 777u, 716u,
+    555u, 563u, 380u, 487u, 464u, 455u, 461u, 445u, 5u, 802u, 785u, 799u, 735u, 533u, 655u, 933u,
+    633u, 634u, 756u, 545u, 750u, 929u, 730u, 794u, 717u, 778u, 932u, 556u, 564u, 488u, 927u, 2u,
+    503u, 631u, 682u, 510u, 524u, 525u, 512u, 811u, 812u, 908u, 381u, 910u, 1053u, 8u, 24u, 28u,
+    469u, 1010u, 1035u, 1096u, 1133u, 1134u, 1135u, 1203u, 21u, 25u, 426u, 428u, 832u, 946u, 999u, 1032u,
+    1059u, 1068u, 1110u, 1111u, 1112u, 1113u, 1185u, 32u, 1012u, 1043u, 1099u, 1139u, 1140u, 1141u, 1206u, 1003u,
+    1064u, 1126u, 1127u, 1128u, 1129u, 1189u, 122u, 124u, 126u, 128u, 130u, 132u, 134u, 136u, 138u, 140u,
+    142u, 144u, 146u, 148u, 150u, 152u, 154u, 156u, 1200u, 60u, 62u, 64u, 66u, 68u, 70u, 72u,
+    74u, 76u, 78u, 80u, 82u, 84u, 86u, 88u, 90u, 92u, 94u, 395u, 396u, 397u, 398u, 399u,
+    402u, 403u, 404u, 405u, 406u, 407u, 1178u, 1191u, 1199u, 1177u, 1195u, 22u, 26u, 468u, 1011u, 1033u,
+    1098u, 1136u, 1137u, 1138u, 1205u, 23u, 27u, 425u, 831u, 1000u, 1034u, 1061u, 1067u, 1114u, 1115u, 1116u,
+    1117u, 1186u, 123u, 125u, 127u, 129u, 131u, 133u, 135u, 137u, 139u, 141u, 143u, 145u, 147u, 149u,
+    151u, 153u, 155u, 157u, 1155u, 1255u, 1258u, 61u, 63u, 65u, 67u, 69u, 71u, 73u, 75u, 77u,
+    79u, 81u, 83u, 85u, 87u, 89u, 91u, 93u, 95u, 962u, 965u, 973u, 1159u, 1234u, 1237u, 427u,
+    833u, 947u, 1001u, 1062u, 1069u, 1118u, 1119u, 1120u, 1121u, 1187u, 961u, 964u, 967u, 972u, 975u, 988u,
+    993u, 1233u, 1236u, 1254u, 1257u, 1002u, 1063u, 1122u, 1123u, 1124u, 1125u, 1188u, 989u, 994u, 1154u, 1256u,
+    1259u, 963u, 966u, 968u, 974u, 976u, 1158u, 1235u, 1238u, 175u, 181u, 342u, 606u, 614u, 622u, 636u,
+    638u, 674u, 677u, 706u, 709u, 776u, 907u, 920u, 176u, 182u, 343u, 509u, 531u, 543u, 637u, 639u,
+    653u, 712u, 748u, 921u, 171u, 177u, 338u, 604u, 612u, 620u, 644u, 646u, 672u, 675u, 704u, 707u,
+    774u, 905u, 924u, 172u, 178u, 339u, 507u, 529u, 541u, 645u, 647u, 651u, 710u, 746u, 925u, 484u,
+    820u, 824u, 825u, 834u, 836u, 838u, 839u, 841u, 843u, 849u, 854u, 858u, 874u, 439u, 441u, 442u,
+    443u, 448u, 450u, 453u, 454u, 882u, 886u, 890u, 892u, 896u, 901u, 482u, 821u, 822u, 823u, 835u,
+    842u, 844u, 845u, 846u, 847u, 848u, 853u, 857u, 873u, 723u, 725u, 726u, 727u, 738u, 740u, 783u,
+    784u, 881u, 885u, 889u, 891u, 895u, 900u, 173u, 179u, 340u, 605u, 613u, 621u, 640u, 642u, 673u,
+    676u, 705u, 708u, 775u, 906u, 922u, 174u, 180u, 341u, 508u, 530u, 542u, 641u, 643u, 652u, 711u,
+    747u, 923u, 187u, 188u, 217u, 222u, 232u, 233u, 234u, 235u, 249u, 250u, 251u, 252u, 300u, 301u,
+    302u, 303u, 389u, 607u, 615u, 635u, 690u, 691u, 787u, 788u, 954u, 980u, 9u, 29u, 263u, 264u,
+    265u, 269u, 270u, 271u, 293u, 294u, 295u, 307u, 308u, 309u, 390u, 495u, 518u, 520u, 623u, 686u,
+    687u, 806u, 981u, 99u, 101u, 106u, 107u, 108u, 112u, 114u, 119u, 120u, 121u, 483u, 837u, 840u,
+    850u, 852u, 855u, 856u, 872u, 230u, 231u, 459u, 460u, 883u, 887u, 888u, 893u, 894u, 899u, 54u,
+    55u, 56u, 57u, 58u, 59u, 353u, 354u, 355u, 362u, 363u, 364u, 370u, 373u, 376u, 379u, 819u,
+    228u, 229u, 791u, 792u, 829u, 869u, 1065u, 1086u, 870u, 1066u, 1087u, 817u, 859u, 863u, 865u, 1071u,
+    1082u, 1090u, 818u, 860u, 864u, 866u, 1072u, 1083u, 1091u, 30u, 1075u, 1076u, 1078u, 1080u, 1094u, 1077u,
+    1079u, 1081u, 1088u, 851u, 1089u, 492u, 537u, 549u, 560u, 715u, 760u, 782u, 798u, 815u, 517u, 554u,
+    568u, 629u, 659u, 721u, 734u, 754u, 490u, 535u, 547u, 558u, 713u, 758u, 780u, 796u, 813u, 553u,
+    566u, 628u, 657u, 719u, 732u, 752u, 13u, 14u, 15u, 444u, 446u, 456u, 465u, 466u, 467u, 728u,
+    736u, 786u, 803u, 804u, 805u, 4u, 536u, 658u, 759u, 548u, 753u, 733u, 797u, 720u, 781u, 559u,
+    567u, 491u, 814u, 714u, 485u, 486u, 561u, 562u, 0u, 10u, 11u, 16u, 17u, 20u, 31u, 191u,
+    196u, 201u, 206u, 273u, 274u, 275u, 276u, 277u, 934u, 42u, 193u, 198u, 203u, 208u, 272u, 194u,
+    199u, 204u, 209u, 930u, 1u, 162u, 163u, 164u, 192u, 197u, 202u, 207u, 239u, 240u, 241u, 165u,
+    166u, 167u, 168u, 169u, 170u, 280u, 282u, 286u, 288u, 936u, 236u, 278u, 283u, 284u, 289u, 935u,
+    185u, 186u, 189u, 190u, 279u, 285u, 926u, 160u, 161u, 195u, 200u, 205u, 210u, 237u, 238u, 242u,
+    243u, 244u, 257u, 258u, 259u, 281u, 287u, 928u, 511u, 513u, 909u, 12u, 18u, 33u, 34u, 35u,
+    911u, 575u, 576u, 579u, 580u, 591u, 592u, 593u, 594u, 569u, 570u, 573u, 574u, 587u, 588u, 589u,
+    590u, 335u, 764u, 766u, 408u, 409u, 334u, 761u, 763u, 435u, 436u, 437u, 310u, 311u, 1165u, 1169u,
+    1218u, 1221u, 1222u, 1044u, 1046u, 1144u, 1167u, 1171u, 1220u, 336u, 337u, 571u, 572u, 577u, 578u, 762u,
+    765u, 767u, 768u, 769u, 770u, 903u, 904u, 951u, 952u, 3u, 600u, 917u, 599u, 918u, 598u, 919u,
+    977u, 902u, 950u,
+};
+
+static const asmkit_arm_thumb4_td_bucket_range_t asmkit_arm_thumb4_td_subbuckets[] = {
+    {UINT32_C(0x00000000), 0u, 6u}, {UINT32_C(0x00100000), 6u, 2u}, {UINT32_C(0x00800000), 8u, 11u}, {UINT32_C(0x00900000), 19u, 14u}, {UINT32_C(0x04000000), 33u, 2u}, {UINT32_C(0x04100000), 35u, 2u}, {UINT32_C(0x04800000), 37u, 13u}, {UINT32_C(0x04900000), 50u, 6u},
+    {UINT32_C(0x00000000), 56u, 3u}, {UINT32_C(0x00100000), 59u, 3u}, {UINT32_C(0x04000000), 62u, 9u}, {UINT32_C(0x04100000), 71u, 9u}, {UINT32_C(0x00000000), 80u, 2u}, {UINT32_C(0x00100000), 82u, 2u}, {UINT32_C(0x00400000), 84u, 1u}, {UINT32_C(0x00500000), 85u, 1u},
+    {UINT32_C(0x04000000), 86u, 7u}, {UINT32_C(0x04100000), 93u, 7u}, {UINT32_C(0x04400000), 100u, 1u}, {UINT32_C(0x04500000), 101u, 1u}, {UINT32_C(0x00000000), 102u, 3u}, {UINT32_C(0x00100000), 105u, 4u}, {UINT32_C(0x04000000), 109u, 9u}, {UINT32_C(0x04100000), 118u, 9u},
+    {UINT32_C(0x00100100), 127u, 13u}, {UINT32_C(0x00100110), 140u, 5u}, {UINT32_C(0x00900100), 145u, 1u}, {UINT32_C(0x04000000), 146u, 16u}, {UINT32_C(0x04000100), 162u, 11u}, {UINT32_C(0x04100000), 173u, 16u}, {UINT32_C(0x04100100), 189u, 11u}, {UINT32_C(0x04800100), 200u, 9u},
+    {UINT32_C(0x04900100), 209u, 9u}, {UINT32_C(0x00000000), 218u, 8u}, {UINT32_C(0x00000040), 226u, 8u}, {UINT32_C(0x00000100), 234u, 1u}, {UINT32_C(0x00000140), 235u, 10u}, {UINT32_C(0x00100000), 245u, 25u}, {UINT32_C(0x00100040), 270u, 15u}, {UINT32_C(0x00100100), 285u, 6u},
+    {UINT32_C(0x00100140), 291u, 6u}, {UINT32_C(0x00800100), 297u, 20u}, {UINT32_C(0x00800140), 317u, 4u}, {UINT32_C(0x00900000), 321u, 16u}, {UINT32_C(0x00900100), 337u, 10u}, {UINT32_C(0x00900140), 347u, 4u}, {UINT32_C(0x00000000), 351u, 2u}, {UINT32_C(0x00000010), 353u, 1u},
+    {UINT32_C(0x00000100), 354u, 1u}, {UINT32_C(0x00000110), 355u, 2u}, {UINT32_C(0x00000200), 357u, 1u}, {UINT32_C(0x00000210), 358u, 1u}, {UINT32_C(0x00000300), 359u, 1u}, {UINT32_C(0x00000400), 360u, 1u}, {UINT32_C(0x00000410), 361u, 2u}, {UINT32_C(0x00000500), 363u, 2u},
+    {UINT32_C(0x00000510), 365u, 1u}, {UINT32_C(0x00000600), 366u, 1u}, {UINT32_C(0x00000610), 367u, 1u}, {UINT32_C(0x00000700), 368u, 1u}, {UINT32_C(0x00100000), 369u, 2u}, {UINT32_C(0x00100010), 371u, 1u}, {UINT32_C(0x00100100), 372u, 1u}, {UINT32_C(0x00100110), 373u, 2u},
+    {UINT32_C(0x00100200), 375u, 1u}, {UINT32_C(0x00100210), 376u, 1u}, {UINT32_C(0x00100300), 377u, 1u}, {UINT32_C(0x00100400), 378u, 1u}, {UINT32_C(0x00100410), 379u, 2u}, {UINT32_C(0x00100500), 381u, 2u}, {UINT32_C(0x00100510), 383u, 1u}, {UINT32_C(0x00100600), 384u, 1u},
+    {UINT32_C(0x00100610), 385u, 1u}, {UINT32_C(0x00100700), 386u, 2u}, {UINT32_C(0x00800010), 388u, 1u}, {UINT32_C(0x00800210), 389u, 1u}, {UINT32_C(0x00800510), 390u, 1u}, {UINT32_C(0x00800710), 391u, 1u}, {UINT32_C(0x00900010), 392u, 2u}, {UINT32_C(0x00900210), 394u, 1u},
+    {UINT32_C(0x00900510), 395u, 1u}, {UINT32_C(0x00900710), 396u, 1u}, {UINT32_C(0x00000000), 397u, 3u}, {UINT32_C(0x00000100), 400u, 3u}, {UINT32_C(0x00000200), 403u, 3u}, {UINT32_C(0x00000400), 406u, 2u}, {UINT32_C(0x00000500), 408u, 3u}, {UINT32_C(0x00000600), 411u, 2u},
+    {UINT32_C(0x00000700), 413u, 2u}, {UINT32_C(0x00000800), 415u, 2u}, {UINT32_C(0x00000900), 417u, 1u}, {UINT32_C(0x00000b00), 418u, 1u}, {UINT32_C(0x00000c00), 419u, 3u}, {UINT32_C(0x00000d00), 422u, 3u}, {UINT32_C(0x00000e00), 425u, 1u}, {UINT32_C(0x00000f00), 426u, 3u},
+    {UINT32_C(0x00000000), 429u, 11u}, {UINT32_C(0x00100000), 440u, 15u}, {UINT32_C(0x00400000), 455u, 8u}, {UINT32_C(0x00500000), 463u, 7u}, {UINT32_C(0x04000000), 470u, 19u}, {UINT32_C(0x04100000), 489u, 30u}, {UINT32_C(0x04400000), 519u, 2u}, {UINT32_C(0x04500000), 521u, 2u},
+    {UINT32_C(0x00000000), 523u, 10u}, {UINT32_C(0x00100000), 533u, 13u}, {UINT32_C(0x04000000), 546u, 21u}, {UINT32_C(0x04100000), 567u, 24u}, {UINT32_C(0x00000000), 591u, 11u}, {UINT32_C(0x04000000), 602u, 11u}, {UINT32_C(0x00100000), 613u, 7u}, {UINT32_C(0x04000000), 620u, 5u},
+    {UINT32_C(0x04100000), 625u, 8u}, {UINT32_C(0x00000000), 633u, 15u}, {UINT32_C(0x00000040), 648u, 12u}, {UINT32_C(0x00100000), 660u, 15u}, {UINT32_C(0x00100040), 675u, 12u}, {UINT32_C(0x00800000), 687u, 14u}, {UINT32_C(0x00800040), 701u, 14u}, {UINT32_C(0x00900000), 715u, 14u},
+    {UINT32_C(0x00900040), 729u, 14u}, {UINT32_C(0x00000000), 743u, 15u}, {UINT32_C(0x00000040), 758u, 12u}, {UINT32_C(0x00100000), 770u, 26u}, {UINT32_C(0x00100040), 796u, 23u}, {UINT32_C(0x00800000), 819u, 18u}, {UINT32_C(0x00800040), 837u, 10u}, {UINT32_C(0x00900000), 847u, 17u},
+    {UINT32_C(0x00900040), 864u, 4u}, {UINT32_C(0x00000000), 868u, 4u}, {UINT32_C(0x00000010), 872u, 3u}, {UINT32_C(0x00100000), 875u, 7u}, {UINT32_C(0x00100010), 882u, 7u}, {UINT32_C(0x00800000), 889u, 6u}, {UINT32_C(0x00800010), 895u, 3u}, {UINT32_C(0x00900000), 898u, 1u},
+    {UINT32_C(0x00900010), 899u, 2u}, {UINT32_C(0x04000000), 901u, 9u}, {UINT32_C(0x04000010), 910u, 8u}, {UINT32_C(0x04100000), 918u, 9u}, {UINT32_C(0x04100010), 927u, 7u}, {UINT32_C(0x04800000), 934u, 3u}, {UINT32_C(0x04800010), 937u, 6u}, {UINT32_C(0x04900010), 943u, 6u},
+    {UINT32_C(0x00000000), 949u, 3u}, {UINT32_C(0x00000100), 952u, 1u}, {UINT32_C(0x00000200), 953u, 2u}, {UINT32_C(0x00000400), 955u, 2u}, {UINT32_C(0x00000500), 957u, 2u}, {UINT32_C(0x00000600), 959u, 2u}, {UINT32_C(0x00000700), 961u, 1u}, {UINT32_C(0x00000800), 962u, 1u},
+    {UINT32_C(0x00000b00), 963u, 1u}, {UINT32_C(0x00000d00), 964u, 2u}, {UINT32_C(0x00000f00), 966u, 2u}, {UINT32_C(0x00800000), 968u, 17u}, {UINT32_C(0x00800100), 985u, 6u}, {UINT32_C(0x00800200), 991u, 5u}, {UINT32_C(0x00800300), 996u, 11u}, {UINT32_C(0x00800400), 1007u, 11u},
+    {UINT32_C(0x00800500), 1018u, 6u}, {UINT32_C(0x00800600), 1024u, 7u}, {UINT32_C(0x00800700), 1031u, 17u}, {UINT32_C(0x00800c00), 1048u, 1u}, {UINT32_C(0x00800d00), 1049u, 1u}, {UINT32_C(0x00800e00), 1050u, 1u}, {UINT32_C(0x00800f00), 1051u, 6u}, {UINT32_C(0x00000000), 1057u, 4u},
+    {UINT32_C(0x00000001), 1061u, 4u}, {UINT32_C(0x00000020), 1065u, 4u}, {UINT32_C(0x00000021), 1069u, 4u}, {UINT32_C(0x00000100), 1073u, 3u}, {UINT32_C(0x00000110), 1076u, 2u}, {UINT32_C(0x00000120), 1078u, 3u}, {UINT32_C(0x00000130), 1081u, 3u}, {UINT32_C(0x00000000), 1084u, 7u},
+    {UINT32_C(0x00000040), 1091u, 6u}, {UINT32_C(0x00000800), 1097u, 12u}, {UINT32_C(0x00000840), 1109u, 4u}, {UINT32_C(0x00000000), 1113u, 3u}, {UINT32_C(0x00000020), 1116u, 2u}, {UINT32_C(0x00000100), 1118u, 3u}, {UINT32_C(0x00000120), 1121u, 2u},
+};
+
+static const uint32_t asmkit_arm_thumb4_td_subbucket_fallback_indices[] = {
+    382u, 384u, 938u, 941u, 945u, 997u, 1004u, 1005u, 1007u, 1054u, 1055u, 1056u, 1057u, 1101u, 1103u, 1148u,
+    1149u, 1173u, 1176u, 1197u, 424u, 931u, 940u, 944u, 1132u, 1175u, 1196u, 995u, 996u, 1008u, 1051u, 1226u,
+    1228u, 1251u, 1009u, 1013u, 1253u, 1270u, 1100u, 1102u, 1130u, 1229u, 1232u, 1249u, 1131u, 1231u, 1248u, 937u,
+    1050u, 1225u, 1227u, 1250u, 949u, 1052u, 1252u, 1269u, 470u, 472u, 473u, 475u, 816u, 939u, 942u, 1037u,
+    1039u, 1040u, 1042u, 1172u, 1192u, 1193u, 471u, 474u, 880u, 943u, 948u, 1038u, 1041u, 1207u, 323u, 383u,
+    423u, 1006u, 1198u, 1208u, 36u, 37u, 43u, 421u, 422u, 828u, 830u, 861u, 862u, 867u, 868u, 871u,
+    884u, 897u, 898u, 998u, 1058u, 1070u, 1073u, 1074u, 1084u, 1085u, 1092u, 1093u, 1104u, 1105u, 1106u, 1107u,
+    1108u, 1147u, 595u, 596u, 597u, 1045u, 1047u, 1145u, 1164u, 1166u, 1168u, 1170u, 1217u, 1219u, 1223u, 1224u,
+    1272u, 1274u, 1301u, 7u, 1146u, 1162u, 1163u, 1174u, 1230u, 1271u, 1273u, 1275u, 1302u, 1305u, 1306u, 1307u,
+    6u, 1048u, 1049u,
+};
+
+static const asmkit_arm_thumb4_td_subbucket_desc_t asmkit_arm_thumb4_td_bucket_subdescs[] = {
+    {UINT32_C(0x04900000), 0u, 8u, 0u, 0u}, {UINT32_C(0x04100000), 8u, 4u, 0u, 0u}, {UINT32_C(0x04500000), 12u, 8u, 0u, 0u}, {UINT32_C(0x04100000), 20u, 4u, 0u, 0u},
+    {UINT32_C(0x04900110), 24u, 9u, 0u, 20u}, {UINT32_C(0x00900140), 33u, 13u, 20u, 7u}, {UINT32_C(0x00900710), 46u, 36u, 27u, 7u}, {UINT32_C(0x00000f00), 82u, 14u, 34u, 4u},
+    {UINT32_C(0x04500000), 96u, 8u, 38u, 6u}, {UINT32_C(0x04100000), 104u, 4u, 44u, 3u}, {UINT32_C(0x04000000), 108u, 2u, 47u, 5u}, {UINT32_C(0x04100000), 110u, 3u, 52u, 4u},
+    {UINT32_C(0x00900040), 113u, 8u, 56u, 14u}, {UINT32_C(0x00900040), 121u, 8u, 70u, 8u}, {UINT32_C(0x04900010), 129u, 15u, 78u, 6u}, {UINT32_C(0x00800f00), 144u, 23u, 84u, 30u},
+};
+
+static const asmkit_arm_thumb4_td_subbucket_desc_t asmkit_arm_thumb4_td_fallback_bucket_subdescs[] = {
+    {UINT32_C(0x00000131), 167u, 8u, 114u, 17u}, {UINT32_C(0x00000840), 175u, 4u, 131u, 13u},
+};
+
+static const asmkit_arm_thumb4_td_subbucket_desc_t asmkit_arm_thumb4_td_bucket_fallback2_subdesc = {UINT32_C(0x00000120), 179u, 4u, 144u, 3u};
+
+static const asmkit_arm_thumb4_td_bucket_range_t* arm_thumb4_td_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_THUMB4_TD_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_thumb4_td_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb4_td_bucket_range_t* bucket = &asmkit_arm_thumb4_td_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_thumb4_td_buckets) && asmkit_arm_thumb4_td_buckets[lo].key == key) {
+        return &asmkit_arm_thumb4_td_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_thumb4_td_bucket_range_t* arm_thumb4_td_fallback_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_THUMB4_TD_FALLBACK_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_thumb4_td_fallback_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb4_td_bucket_range_t* bucket = &asmkit_arm_thumb4_td_fallback_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_thumb4_td_fallback_buckets) && asmkit_arm_thumb4_td_fallback_buckets[lo].key == key) {
+        return &asmkit_arm_thumb4_td_fallback_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_thumb4_td_bucket_range_t* arm_thumb4_td_subbucket(uint32_t word, const asmkit_arm_thumb4_td_subbucket_desc_t* desc)
+{
+    uint32_t key;
+    uint32_t lo;
+    uint32_t hi;
+    if (desc->mask == 0u || desc->count == 0u) {
+        return 0;
+    }
+    key = word & desc->mask;
+    lo = desc->first;
+    hi = desc->first + desc->count;
+    while (lo < hi) {
+        uint32_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb4_td_bucket_range_t* bucket = &asmkit_arm_thumb4_td_subbuckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < desc->first + desc->count && asmkit_arm_thumb4_td_subbuckets[lo].key == key) {
+        return &asmkit_arm_thumb4_td_subbuckets[lo];
+    }
+    return 0;
+}
+
+typedef struct asmkit_arm_thumb2_td_bucket_range {
+    uint32_t key;
+    uint32_t first;
+    uint32_t count;
+} asmkit_arm_thumb2_td_bucket_range_t;
+
+typedef struct asmkit_arm_thumb2_td_subbucket_desc {
+    uint32_t mask;
+    uint32_t first;
+    uint32_t count;
+    uint32_t fallback_first;
+    uint32_t fallback_count;
+} asmkit_arm_thumb2_td_subbucket_desc_t;
+
+#define ASMKIT_ARM_THUMB2_TD_BUCKET_MASK UINT32_C(0x0000f000)
+
+static const uint32_t asmkit_arm_thumb2_td_bucket_indices[] = {
+    1286u, 1343u, 1344u, 1315u, 1316u, 1329u, 1330u, 1334u, 1336u, 1345u, 1331u, 1351u, 1209u, 1210u, 1211u, 1212u,
+    1213u, 1214u, 1276u, 1277u, 1278u, 1279u, 1280u, 1281u, 1282u, 1284u, 1285u, 1287u, 1288u, 1289u, 1293u, 1294u,
+    1295u, 1298u, 1309u, 1311u, 1312u, 1341u, 1319u, 1320u, 1321u, 1322u, 1323u, 1326u, 1327u, 1328u, 1340u, 1349u,
+    1338u, 1347u, 1339u, 1348u, 1342u, 1350u, 1332u, 1333u, 1142u, 1143u, 1215u, 1216u, 1283u, 1290u, 1291u, 1292u,
+    1296u, 1297u, 1299u, 1300u, 1303u, 1304u, 1308u, 1310u, 1317u, 1318u, 1324u, 1325u, 1337u, 1346u, 1109u, 1313u,
+    1314u, 1352u, 1335u,
+};
+
+static const asmkit_arm_thumb2_td_bucket_range_t asmkit_arm_thumb2_td_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 3u}, {UINT32_C(0x00001000), 3u, 5u}, {UINT32_C(0x00002000), 8u, 2u}, {UINT32_C(0x00003000), 10u, 2u}, {UINT32_C(0x00004000), 12u, 26u}, {UINT32_C(0x00005000), 38u, 8u}, {UINT32_C(0x00006000), 46u, 2u}, {UINT32_C(0x00007000), 48u, 2u},
+    {UINT32_C(0x00008000), 50u, 2u}, {UINT32_C(0x00009000), 52u, 2u}, {UINT32_C(0x0000a000), 54u, 2u}, {UINT32_C(0x0000b000), 56u, 20u}, {UINT32_C(0x0000c000), 76u, 2u}, {UINT32_C(0x0000d000), 78u, 4u}, {UINT32_C(0x0000e000), 82u, 1u},
+};
+
+#define ASMKIT_ARM_THUMB2_TD_FALLBACK_BUCKET_MASK UINT32_C(0x00000000)
+
+static const uint32_t asmkit_arm_thumb2_td_fallback_bucket_indices[] = {
+    0u,
+};
+
+static const asmkit_arm_thumb2_td_bucket_range_t asmkit_arm_thumb2_td_fallback_buckets[] = {
+    {UINT32_C(0x00000000), 0u, 0u},
+};
+
+#define ASMKIT_ARM_THUMB2_TD_BUCKET_FALLBACK2_COUNT 0u
+
+static const uint32_t asmkit_arm_thumb2_td_bucket_fallback2_indices[] = {
+    0u,
+};
+
+static const uint32_t asmkit_arm_thumb2_td_subbucket_indices[] = {
+    1277u, 1282u, 1284u, 1285u, 1276u, 1278u, 1293u, 1295u, 1280u, 1281u, 1294u, 1298u, 1279u, 1287u, 1288u, 1289u,
+    1209u, 1210u, 1309u, 1311u, 1312u, 1211u, 1212u, 1213u, 1214u, 1303u, 1304u, 1296u, 1297u, 1299u, 1300u, 1325u,
+    1142u, 1143u, 1215u, 1283u, 1290u, 1291u, 1292u, 1324u, 1216u, 1308u, 1310u,
+};
+
+static const asmkit_arm_thumb2_td_bucket_range_t asmkit_arm_thumb2_td_subbuckets[] = {
+    {UINT32_C(0x00000000), 0u, 4u}, {UINT32_C(0x00000100), 4u, 4u}, {UINT32_C(0x00000200), 8u, 4u}, {UINT32_C(0x00000300), 12u, 4u}, {UINT32_C(0x00000400), 16u, 3u}, {UINT32_C(0x00000500), 19u, 1u}, {UINT32_C(0x00000600), 20u, 1u}, {UINT32_C(0x00000700), 21u, 4u},
+    {UINT32_C(0x00000000), 25u, 2u}, {UINT32_C(0x00000200), 27u, 4u}, {UINT32_C(0x00000400), 31u, 1u}, {UINT32_C(0x00000600), 32u, 3u}, {UINT32_C(0x00000a00), 35u, 4u}, {UINT32_C(0x00000c00), 39u, 1u}, {UINT32_C(0x00000e00), 40u, 3u},
+};
+
+static const uint32_t asmkit_arm_thumb2_td_subbucket_fallback_indices[] = {
+    1341u, 1317u, 1318u,
+};
+
+static const asmkit_arm_thumb2_td_subbucket_desc_t asmkit_arm_thumb2_td_bucket_subdescs[] = {
+    {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u},
+    {UINT32_C(0x00000700), 0u, 8u, 0u, 1u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u},
+    {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000e00), 8u, 7u, 1u, 2u},
+    {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u}, {UINT32_C(0x00000000), 0u, 0u, 0u, 0u},
+};
+
+static const asmkit_arm_thumb2_td_subbucket_desc_t asmkit_arm_thumb2_td_fallback_bucket_subdescs[] = {
+    {UINT32_C(0x00000000), 0u, 0u, 0u, 0u},
+};
+
+static const asmkit_arm_thumb2_td_subbucket_desc_t asmkit_arm_thumb2_td_bucket_fallback2_subdesc = {UINT32_C(0x00000000), 0u, 0u, 0u, 0u};
+
+static const asmkit_arm_thumb2_td_bucket_range_t* arm_thumb2_td_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_THUMB2_TD_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_thumb2_td_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb2_td_bucket_range_t* bucket = &asmkit_arm_thumb2_td_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_thumb2_td_buckets) && asmkit_arm_thumb2_td_buckets[lo].key == key) {
+        return &asmkit_arm_thumb2_td_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_thumb2_td_bucket_range_t* arm_thumb2_td_fallback_bucket(uint32_t word)
+{
+    uint32_t key;
+    size_t lo;
+    size_t hi;
+    key = word & ASMKIT_ARM_THUMB2_TD_FALLBACK_BUCKET_MASK;
+    lo = 0u;
+    hi = ASMKIT_ARRAY_COUNT(asmkit_arm_thumb2_td_fallback_buckets);
+    while (lo < hi) {
+        size_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb2_td_bucket_range_t* bucket = &asmkit_arm_thumb2_td_fallback_buckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < ASMKIT_ARRAY_COUNT(asmkit_arm_thumb2_td_fallback_buckets) && asmkit_arm_thumb2_td_fallback_buckets[lo].key == key) {
+        return &asmkit_arm_thumb2_td_fallback_buckets[lo];
+    }
+    return 0;
+}
+
+static const asmkit_arm_thumb2_td_bucket_range_t* arm_thumb2_td_subbucket(uint32_t word, const asmkit_arm_thumb2_td_subbucket_desc_t* desc)
+{
+    uint32_t key;
+    uint32_t lo;
+    uint32_t hi;
+    if (desc->mask == 0u || desc->count == 0u) {
+        return 0;
+    }
+    key = word & desc->mask;
+    lo = desc->first;
+    hi = desc->first + desc->count;
+    while (lo < hi) {
+        uint32_t mid = lo + ((hi - lo) >> 1);
+        const asmkit_arm_thumb2_td_bucket_range_t* bucket = &asmkit_arm_thumb2_td_subbuckets[mid];
+        if (bucket->key < key) {
+            lo = mid + 1u;
+        } else {
+            hi = mid;
+        }
+    }
+    if (lo < desc->first + desc->count && asmkit_arm_thumb2_td_subbuckets[lo].key == key) {
+        return &asmkit_arm_thumb2_td_subbuckets[lo];
+    }
+    return 0;
+}
+
 static int64_t arm_sign_extend(uint32_t value, unsigned bits)
 {
     uint32_t sign;
@@ -1096,8 +1721,6 @@ static int arm_decode_td_operands(const asmkit_arm_td_record_t* record, uint32_t
     for (i = 0u; i < ASMKIT_MAX_OPERANDS; ++i) {
         seen[i] = 0u;
         values[i] = 0u;
-        out_inst->operands[i] = asmkit_operand_none();
-        out_inst->operands[i].operand_index = (uint8_t)i;
     }
     for (i = 0u; i < record->piece_count; ++i) {
         const asmkit_arm_td_piece_t* piece = &asmkit_arm_td_pieces[record->piece_index + i];
@@ -1262,41 +1885,225 @@ static int arm_td_space_matches(uint8_t record_space, uint8_t requested_space)
     return record_space == requested_space;
 }
 
+static void arm_consider_td_record(
+    const asmkit_engine_t* engine,
+    uint32_t word,
+    uint8_t decode_space,
+    int check_features,
+    const asmkit_arm_td_record_t* record,
+    uint32_t record_index,
+    const asmkit_arm_td_record_t** best_record,
+    uint32_t* best_index,
+    uint8_t* best_priority,
+    uint8_t* best_fixed_bits,
+    int* have_best,
+    uint32_t* best_blocked_index,
+    uint8_t* best_blocked_priority,
+    uint8_t* best_blocked_fixed_bits,
+    int* have_blocked)
+{
+    if (!arm_td_space_matches(record->decode_space, decode_space)) {
+        return;
+    }
+    if ((word & record->mask) != record->value) {
+        return;
+    }
+    if (!arm_td_record_decodes_operands(record, word)) {
+        return;
+    }
+    if (check_features && !arm_td_features_match(engine, record)) {
+        if (!*have_blocked || record->priority > *best_blocked_priority ||
+            (record->priority == *best_blocked_priority && record->fixed_bits > *best_blocked_fixed_bits) ||
+            (record->priority == *best_blocked_priority && record->fixed_bits == *best_blocked_fixed_bits && record_index < *best_blocked_index)) {
+            *best_blocked_index = record_index;
+            *best_blocked_priority = record->priority;
+            *best_blocked_fixed_bits = record->fixed_bits;
+            *have_blocked = 1;
+        }
+        return;
+    }
+    if (!*have_best || record->priority > *best_priority ||
+        (record->priority == *best_priority && record->fixed_bits > *best_fixed_bits) ||
+        (record->priority == *best_priority && record->fixed_bits == *best_fixed_bits && record_index < *best_index)) {
+        *best_record = record;
+        *best_index = record_index;
+        *best_priority = record->priority;
+        *best_fixed_bits = record->fixed_bits;
+        *have_best = 1;
+    }
+}
+
+static void arm_consider_arm_a32_td_indexed_bucket(
+    const asmkit_engine_t* engine,
+    uint32_t word,
+    uint8_t decode_space,
+    int check_features,
+    const asmkit_arm_td_record_t* records,
+    const asmkit_arm_a32_td_subbucket_desc_t* subdesc,
+    const uint32_t* base_indices,
+    uint32_t first,
+    uint32_t count,
+    const asmkit_arm_td_record_t** best_record,
+    uint32_t* best_index,
+    uint8_t* best_priority,
+    uint8_t* best_fixed_bits,
+    int* have_best,
+    uint32_t* best_blocked_index,
+    uint8_t* best_blocked_priority,
+    uint8_t* best_blocked_fixed_bits,
+    int* have_blocked)
+{
+    const asmkit_arm_a32_td_bucket_range_t* subbucket;
+    uint32_t end;
+    uint32_t i;
+    if (subdesc->mask != 0u) {
+        subbucket = arm_a32_td_subbucket(word, subdesc);
+        if (subbucket != 0) {
+            end = subbucket->first + subbucket->count;
+            for (i = subbucket->first; i < end; ++i) {
+                uint32_t record_index = asmkit_arm_a32_td_subbucket_indices[i];
+                const asmkit_arm_td_record_t* record = &records[record_index];
+                arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+            }
+        }
+        end = subdesc->fallback_first + subdesc->fallback_count;
+        for (i = subdesc->fallback_first; i < end; ++i) {
+            uint32_t record_index = asmkit_arm_a32_td_subbucket_fallback_indices[i];
+            const asmkit_arm_td_record_t* record = &records[record_index];
+            arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+        }
+        return;
+    }
+    end = first + count;
+    for (i = first; i < end; ++i) {
+        uint32_t record_index = base_indices[i];
+        const asmkit_arm_td_record_t* record = &records[record_index];
+        arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+    }
+}
+
+static void arm_consider_arm_thumb4_td_indexed_bucket(
+    const asmkit_engine_t* engine,
+    uint32_t word,
+    uint8_t decode_space,
+    int check_features,
+    const asmkit_arm_td_record_t* records,
+    const asmkit_arm_thumb4_td_subbucket_desc_t* subdesc,
+    const uint32_t* base_indices,
+    uint32_t first,
+    uint32_t count,
+    const asmkit_arm_td_record_t** best_record,
+    uint32_t* best_index,
+    uint8_t* best_priority,
+    uint8_t* best_fixed_bits,
+    int* have_best,
+    uint32_t* best_blocked_index,
+    uint8_t* best_blocked_priority,
+    uint8_t* best_blocked_fixed_bits,
+    int* have_blocked)
+{
+    const asmkit_arm_thumb4_td_bucket_range_t* subbucket;
+    uint32_t end;
+    uint32_t i;
+    if (subdesc->mask != 0u) {
+        subbucket = arm_thumb4_td_subbucket(word, subdesc);
+        if (subbucket != 0) {
+            end = subbucket->first + subbucket->count;
+            for (i = subbucket->first; i < end; ++i) {
+                uint32_t record_index = asmkit_arm_thumb4_td_subbucket_indices[i];
+                const asmkit_arm_td_record_t* record = &records[record_index];
+                arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+            }
+        }
+        end = subdesc->fallback_first + subdesc->fallback_count;
+        for (i = subdesc->fallback_first; i < end; ++i) {
+            uint32_t record_index = asmkit_arm_thumb4_td_subbucket_fallback_indices[i];
+            const asmkit_arm_td_record_t* record = &records[record_index];
+            arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+        }
+        return;
+    }
+    end = first + count;
+    for (i = first; i < end; ++i) {
+        uint32_t record_index = base_indices[i];
+        const asmkit_arm_td_record_t* record = &records[record_index];
+        arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+    }
+}
+
+static void arm_consider_arm_thumb2_td_indexed_bucket(
+    const asmkit_engine_t* engine,
+    uint32_t word,
+    uint8_t decode_space,
+    int check_features,
+    const asmkit_arm_td_record_t* records,
+    const asmkit_arm_thumb2_td_subbucket_desc_t* subdesc,
+    const uint32_t* base_indices,
+    uint32_t first,
+    uint32_t count,
+    const asmkit_arm_td_record_t** best_record,
+    uint32_t* best_index,
+    uint8_t* best_priority,
+    uint8_t* best_fixed_bits,
+    int* have_best,
+    uint32_t* best_blocked_index,
+    uint8_t* best_blocked_priority,
+    uint8_t* best_blocked_fixed_bits,
+    int* have_blocked)
+{
+    const asmkit_arm_thumb2_td_bucket_range_t* subbucket;
+    uint32_t end;
+    uint32_t i;
+    if (subdesc->mask != 0u) {
+        subbucket = arm_thumb2_td_subbucket(word, subdesc);
+        if (subbucket != 0) {
+            end = subbucket->first + subbucket->count;
+            for (i = subbucket->first; i < end; ++i) {
+                uint32_t record_index = asmkit_arm_thumb2_td_subbucket_indices[i];
+                const asmkit_arm_td_record_t* record = &records[record_index];
+                arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+            }
+        }
+        end = subdesc->fallback_first + subdesc->fallback_count;
+        for (i = subdesc->fallback_first; i < end; ++i) {
+            uint32_t record_index = asmkit_arm_thumb2_td_subbucket_fallback_indices[i];
+            const asmkit_arm_td_record_t* record = &records[record_index];
+            arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+        }
+        return;
+    }
+    end = first + count;
+    for (i = first; i < end; ++i) {
+        uint32_t record_index = base_indices[i];
+        const asmkit_arm_td_record_t* record = &records[record_index];
+        arm_consider_td_record(engine, word, decode_space, check_features, record, record_index, best_record, best_index, best_priority, best_fixed_bits, have_best, best_blocked_index, best_blocked_priority, best_blocked_fixed_bits, have_blocked);
+    }
+}
+
 static const asmkit_arm_td_record_t* arm_find_a32_td_record_in_space(const asmkit_engine_t* engine, uint32_t word, uint8_t decode_space, int check_features)
 {
+    const asmkit_arm_a32_td_bucket_range_t* bucket;
     const asmkit_arm_td_record_t* best_record = 0;
+    uint32_t best_index = (uint32_t)~0u;
     uint8_t best_priority = 0u;
     uint8_t best_fixed_bits = 0u;
+    uint32_t best_blocked_index = (uint32_t)~0u;
     uint8_t best_blocked_priority = 0u;
     uint8_t best_blocked_fixed_bits = 0u;
     int have_best = 0;
     int have_blocked = 0;
-    size_t i;
-    for (i = 0u; i < ASMKIT_ARRAY_COUNT(asmkit_arm_a32_td_records); ++i) {
-        const asmkit_arm_td_record_t* record = &asmkit_arm_a32_td_records[i];
-        if (!arm_td_space_matches(record->decode_space, decode_space)) {
-            continue;
-        }
-        if ((word & record->mask) == record->value) {
-            if (!arm_td_record_decodes_operands(record, word)) {
-                continue;
-            }
-            if (check_features && !arm_td_features_match(engine, record)) {
-                if (!have_blocked || record->priority > best_blocked_priority || (record->priority == best_blocked_priority && record->fixed_bits > best_blocked_fixed_bits)) {
-                    best_blocked_priority = record->priority;
-                    best_blocked_fixed_bits = record->fixed_bits;
-                    have_blocked = 1;
-                }
-                continue;
-            }
-            if (!have_best || record->priority > best_priority || (record->priority == best_priority && record->fixed_bits > best_fixed_bits)) {
-                best_record = record;
-                best_priority = record->priority;
-                best_fixed_bits = record->fixed_bits;
-                have_best = 1;
-            }
-        }
+    uint32_t bucket_index;
+    bucket = arm_a32_td_bucket(word);
+    if (bucket != 0) {
+        bucket_index = (uint32_t)(bucket - asmkit_arm_a32_td_buckets);
+        arm_consider_arm_a32_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_a32_td_records, &asmkit_arm_a32_td_bucket_subdescs[bucket_index], asmkit_arm_a32_td_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
     }
+    bucket = arm_a32_td_fallback_bucket(word);
+    if (bucket != 0) {
+        bucket_index = (uint32_t)(bucket - asmkit_arm_a32_td_fallback_buckets);
+        arm_consider_arm_a32_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_a32_td_records, &asmkit_arm_a32_td_fallback_bucket_subdescs[bucket_index], asmkit_arm_a32_td_fallback_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
+    }
+    arm_consider_arm_a32_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_a32_td_records, &asmkit_arm_a32_td_bucket_fallback2_subdesc, asmkit_arm_a32_td_bucket_fallback2_indices, 0u, ASMKIT_ARM_A32_TD_BUCKET_FALLBACK2_COUNT, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
     if (check_features && have_blocked && (!have_best || best_blocked_priority > best_priority || (best_blocked_priority == best_priority && best_blocked_fixed_bits > best_fixed_bits))) {
         return 0;
     }
@@ -1311,37 +2118,39 @@ static const asmkit_arm_td_record_t* arm_find_a32_td_record(const asmkit_engine_
 static const asmkit_arm_td_record_t* arm_find_thumb_td_record_in_space(const asmkit_engine_t* engine, uint32_t word, uint8_t size, uint8_t decode_space, int check_features)
 {
     const asmkit_arm_td_record_t* best_record = 0;
+    uint32_t best_index = (uint32_t)~0u;
     uint8_t best_priority = 0u;
     uint8_t best_fixed_bits = 0u;
+    uint32_t best_blocked_index = (uint32_t)~0u;
     uint8_t best_blocked_priority = 0u;
     uint8_t best_blocked_fixed_bits = 0u;
     int have_best = 0;
     int have_blocked = 0;
-    size_t i;
-    for (i = 0u; i < ASMKIT_ARRAY_COUNT(asmkit_arm_thumb_td_records); ++i) {
-        const asmkit_arm_td_record_t* record = &asmkit_arm_thumb_td_records[i];
-        if (!arm_td_space_matches(record->decode_space, decode_space)) {
-            continue;
+    uint32_t bucket_index;
+    if (size == 4u) {
+        const asmkit_arm_thumb4_td_bucket_range_t* bucket = arm_thumb4_td_bucket(word);
+        if (bucket != 0) {
+            bucket_index = (uint32_t)(bucket - asmkit_arm_thumb4_td_buckets);
+            arm_consider_arm_thumb4_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb4_td_bucket_subdescs[bucket_index], asmkit_arm_thumb4_td_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
         }
-        if (record->size == size && (word & record->mask) == record->value) {
-            if (!arm_td_record_decodes_operands(record, word)) {
-                continue;
-            }
-            if (check_features && !arm_td_features_match(engine, record)) {
-                if (!have_blocked || record->priority > best_blocked_priority || (record->priority == best_blocked_priority && record->fixed_bits > best_blocked_fixed_bits)) {
-                    best_blocked_priority = record->priority;
-                    best_blocked_fixed_bits = record->fixed_bits;
-                    have_blocked = 1;
-                }
-                continue;
-            }
-            if (!have_best || record->priority > best_priority || (record->priority == best_priority && record->fixed_bits > best_fixed_bits)) {
-                best_record = record;
-                best_priority = record->priority;
-                best_fixed_bits = record->fixed_bits;
-                have_best = 1;
-            }
+        bucket = arm_thumb4_td_fallback_bucket(word);
+        if (bucket != 0) {
+            bucket_index = (uint32_t)(bucket - asmkit_arm_thumb4_td_fallback_buckets);
+            arm_consider_arm_thumb4_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb4_td_fallback_bucket_subdescs[bucket_index], asmkit_arm_thumb4_td_fallback_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
         }
+        arm_consider_arm_thumb4_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb4_td_bucket_fallback2_subdesc, asmkit_arm_thumb4_td_bucket_fallback2_indices, 0u, ASMKIT_ARM_THUMB4_TD_BUCKET_FALLBACK2_COUNT, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
+    } else {
+        const asmkit_arm_thumb2_td_bucket_range_t* bucket = arm_thumb2_td_bucket(word);
+        if (bucket != 0) {
+            bucket_index = (uint32_t)(bucket - asmkit_arm_thumb2_td_buckets);
+            arm_consider_arm_thumb2_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb2_td_bucket_subdescs[bucket_index], asmkit_arm_thumb2_td_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
+        }
+        bucket = arm_thumb2_td_fallback_bucket(word);
+        if (bucket != 0) {
+            bucket_index = (uint32_t)(bucket - asmkit_arm_thumb2_td_fallback_buckets);
+            arm_consider_arm_thumb2_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb2_td_fallback_bucket_subdescs[bucket_index], asmkit_arm_thumb2_td_fallback_bucket_indices, bucket->first, bucket->count, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
+        }
+        arm_consider_arm_thumb2_td_indexed_bucket(engine, word, decode_space, check_features, asmkit_arm_thumb_td_records, &asmkit_arm_thumb2_td_bucket_fallback2_subdesc, asmkit_arm_thumb2_td_bucket_fallback2_indices, 0u, ASMKIT_ARM_THUMB2_TD_BUCKET_FALLBACK2_COUNT, &best_record, &best_index, &best_priority, &best_fixed_bits, &have_best, &best_blocked_index, &best_blocked_priority, &best_blocked_fixed_bits, &have_blocked);
     }
     if (check_features && have_blocked && (!have_best || best_blocked_priority > best_priority || (best_blocked_priority == best_priority && best_blocked_fixed_bits > best_fixed_bits))) {
         return 0;

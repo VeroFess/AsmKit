@@ -103,6 +103,7 @@ uint32_t asmkit_gen_x86_cpu_count(void);
 const asmkit_instruction_info_t* asmkit_gen_x86_instruction_info_by_index(uint32_t index);
 const asmkit_instruction_info_t* asmkit_gen_x86_instruction_info(uint32_t id);
 uint32_t asmkit_gen_x86_instruction_count(void);
+const asmkit_operand_info_t* asmkit_gen_x86_instruction_operand_infos(uint32_t id, uint32_t* out_count);
 const asmkit_operand_info_t* asmkit_gen_x86_instruction_operand_info(uint32_t id, uint32_t operand_index);
 const asmkit_instruction_register_effect_t* asmkit_gen_x86_instruction_register_effect(uint32_t id, uint32_t effect_index);
 
@@ -125,6 +126,7 @@ uint32_t asmkit_gen_arm_cpu_count(void);
 const asmkit_instruction_info_t* asmkit_gen_arm_instruction_info_by_index(uint32_t index);
 const asmkit_instruction_info_t* asmkit_gen_arm_instruction_info(uint32_t id);
 uint32_t asmkit_gen_arm_instruction_count(void);
+const asmkit_operand_info_t* asmkit_gen_arm_instruction_operand_infos(uint32_t id, uint32_t* out_count);
 const asmkit_operand_info_t* asmkit_gen_arm_instruction_operand_info(uint32_t id, uint32_t operand_index);
 const asmkit_instruction_register_effect_t* asmkit_gen_arm_instruction_register_effect(uint32_t id, uint32_t effect_index);
 
@@ -147,6 +149,7 @@ uint32_t asmkit_gen_aarch64_cpu_count(void);
 const asmkit_instruction_info_t* asmkit_gen_aarch64_instruction_info_by_index(uint32_t index);
 const asmkit_instruction_info_t* asmkit_gen_aarch64_instruction_info(uint32_t id);
 uint32_t asmkit_gen_aarch64_instruction_count(void);
+const asmkit_operand_info_t* asmkit_gen_aarch64_instruction_operand_infos(uint32_t id, uint32_t* out_count);
 const asmkit_operand_info_t* asmkit_gen_aarch64_instruction_operand_info(uint32_t id, uint32_t operand_index);
 const asmkit_instruction_register_effect_t* asmkit_gen_aarch64_instruction_register_effect(uint32_t id, uint32_t effect_index);
 
@@ -169,6 +172,7 @@ uint32_t asmkit_gen_bpf_operand_type_count(void);
 const asmkit_instruction_info_t* asmkit_gen_bpf_instruction_info_by_index(uint32_t index);
 const asmkit_instruction_info_t* asmkit_gen_bpf_instruction_info(uint32_t id);
 uint32_t asmkit_gen_bpf_instruction_count(void);
+const asmkit_operand_info_t* asmkit_gen_bpf_instruction_operand_infos(uint32_t id, uint32_t* out_count);
 const asmkit_operand_info_t* asmkit_gen_bpf_instruction_operand_info(uint32_t id, uint32_t operand_index);
 const asmkit_instruction_register_effect_t* asmkit_gen_bpf_instruction_register_effect(uint32_t id, uint32_t effect_index);
 const asmkit_bpf_opcode_field_info_t* asmkit_gen_bpf_opcode_field_info_by_index(uint32_t kind, uint32_t index);
@@ -193,6 +197,7 @@ uint32_t asmkit_gen_wasm_cpu_count(void);
 const asmkit_instruction_info_t* asmkit_gen_wasm_instruction_info_by_index(uint32_t index);
 const asmkit_instruction_info_t* asmkit_gen_wasm_instruction_info(uint32_t id);
 uint32_t asmkit_gen_wasm_instruction_count(void);
+const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_infos(uint32_t id, uint32_t* out_count);
 const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_info(uint32_t id, uint32_t operand_index);
 const asmkit_instruction_register_effect_t* asmkit_gen_wasm_instruction_register_effect(uint32_t id, uint32_t effect_index);
 

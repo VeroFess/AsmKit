@@ -189,6 +189,10 @@ static const asmkit_register_info_t asmkit_wasm_register_infos[] = {
     {ASMKIT_WASM_REG_ARGUMENTS, ASMKIT_ARCH_WASM, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("ARGUMENTS"), 0u, 0u, 0u, 0u},
 };
 
+static const uint32_t asmkit_wasm_register_info_index_by_id[] = {
+    0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u,
+};
+
 const asmkit_register_info_t* asmkit_gen_wasm_register_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_register_infos)) {
@@ -199,13 +203,15 @@ const asmkit_register_info_t* asmkit_gen_wasm_register_info_by_index(uint32_t in
 
 const asmkit_register_info_t* asmkit_gen_wasm_register_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_wasm_register_infos); ++i) {
-        if (asmkit_wasm_register_infos[i].id == id) {
-            return &asmkit_wasm_register_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_register_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_wasm_register_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_wasm_register_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_wasm_register_count(void)
@@ -235,6 +241,11 @@ static const asmkit_operand_type_info_t asmkit_wasm_operand_type_infos[] = {
     {18u, ASMKIT_ARCH_WASM, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("local_op"), ASMKIT_OP_WASM_INDEX, ASMKIT_OPERAND_ENCODING_IMMEDIATE, 32u},
 };
 
+static const uint32_t asmkit_wasm_operand_type_info_index_by_id[] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u,
+};
+
 const asmkit_operand_type_info_t* asmkit_gen_wasm_operand_type_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_operand_type_infos)) {
@@ -245,13 +256,15 @@ const asmkit_operand_type_info_t* asmkit_gen_wasm_operand_type_info_by_index(uin
 
 const asmkit_operand_type_info_t* asmkit_gen_wasm_operand_type_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_wasm_operand_type_infos); ++i) {
-        if (asmkit_wasm_operand_type_infos[i].id == id) {
-            return &asmkit_wasm_operand_type_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_operand_type_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_wasm_operand_type_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_wasm_operand_type_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_wasm_operand_type_count(void)
@@ -265,6 +278,8 @@ uint32_t asmkit_gen_wasm_operand_type_count(void)
 
 #include "asmkit_gen_wasm_semantics_asmkit_wasm_instruction_infos.inc"
 
+#include "asmkit_gen_wasm_semantics_asmkit_wasm_instruction_info_index_by_id.inc"
+
 const asmkit_instruction_info_t* asmkit_gen_wasm_instruction_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_instruction_infos)) {
@@ -275,18 +290,32 @@ const asmkit_instruction_info_t* asmkit_gen_wasm_instruction_info_by_index(uint3
 
 const asmkit_instruction_info_t* asmkit_gen_wasm_instruction_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_wasm_instruction_infos); ++i) {
-        if (asmkit_wasm_instruction_infos[i].id == id) {
-            return &asmkit_wasm_instruction_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_instruction_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_wasm_instruction_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_wasm_instruction_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_wasm_instruction_count(void)
 {
     return (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_wasm_instruction_infos);
+}
+
+const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_infos(uint32_t id, uint32_t* out_count)
+{
+    const asmkit_instruction_info_t* info;
+    if (out_count != 0) { *out_count = 0u; }
+    info = asmkit_gen_wasm_instruction_info(id);
+    if (info == 0 || info->operand_info_count == 0u) {
+        return 0;
+    }
+    if (out_count != 0) { *out_count = info->operand_info_count; }
+    return &asmkit_wasm_operand_infos[info->operand_info_index];
 }
 
 const asmkit_operand_info_t* asmkit_gen_wasm_instruction_operand_info(uint32_t id, uint32_t operand_index)

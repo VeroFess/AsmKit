@@ -29,7 +29,9 @@ int asmkit_test_easy_api(void)
     asmkit_text_result_t text_result;
     uint8_t out[32];
     char text[64];
+#if ASMKIT_ENABLE_TEXT
     uint8_t x86_mov_rax_rbx[] = {0x48u, 0x89u, 0xd8u};
+#endif
     uint8_t x86_nop[] = {0x90u};
     uint8_t bpf_add_ri[] = {0x07u, 0x01u, 0x00u, 0x00u, 0x05u, 0x00u, 0x00u, 0x00u};
 

@@ -97,6 +97,30 @@ uint32_t asmkit_gen_aarch64_cpu_count(void)
 
 #include "asmkit_gen_aarch64_semantics_asmkit_aarch64_register_infos.inc"
 
+static const uint32_t asmkit_aarch64_register_info_index_by_id[] = {
+    0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u,
+    16u, 17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u, 30u, 31u,
+    32u, 33u, 34u, 35u, 36u, 37u, 38u, 39u, 40u, 41u, 42u, 43u, 44u, 45u, 46u, 47u,
+    48u, 49u, 50u, 51u, 52u, 53u, 54u, 55u, 56u, 57u, 58u, 59u, 60u, 61u, 62u, 63u,
+    64u, 65u, 66u, 67u, 68u, 69u, 70u, 71u, 72u, 73u, 74u, 75u, 76u, 77u, 78u, 79u,
+    80u, 81u, 82u, 83u, 84u, 85u, 86u, 87u, 88u, 89u, 90u, 91u, 92u, 93u, 94u, 95u,
+    96u, 97u, 98u, 99u, 100u, 101u, 102u, 103u, 104u, 105u, 106u, 107u, 108u, 109u, 110u, 111u,
+    112u, 113u, 114u, 115u, 116u, 117u, 118u, 119u, 120u, 121u, 122u, 123u, 124u, 125u, 126u, 127u,
+    128u, 129u, 130u, 131u, 132u, 133u, 134u, 135u, 136u, 137u, 138u, 139u, 140u, 141u, 142u, 143u,
+    144u, 145u, 146u, 147u, 148u, 149u, 150u, 151u, 152u, 153u, 154u, 155u, 156u, 157u, 158u, 159u,
+    160u, 161u, 162u, 163u, 164u, 165u, 166u, 167u, 168u, 169u, 170u, 171u, 172u, 173u, 174u, 175u,
+    176u, 177u, 178u, 179u, 180u, 181u, 182u, 183u, 184u, 185u, 186u, 187u, 188u, 189u, 190u, 191u,
+    192u, 193u, 194u, 195u, 196u, 197u, 198u, 199u, 200u, 201u, 202u, 203u, 204u, 205u, 206u, 207u,
+    208u, 209u, 210u, 211u, 212u, 213u, 214u, 215u, 216u, 217u, 218u, 219u, 220u, 221u, 222u, 223u,
+    224u, 225u, 226u, 227u, 228u, 229u, 230u, 231u, 232u, 233u, 234u, 235u, 236u, 237u, 238u, 239u,
+    240u, 241u, 242u, 243u, 244u, 245u, 246u, 247u, 248u, 249u, 250u, 251u, 252u, 253u, 254u, 255u,
+    256u, 257u, 258u, 259u, 260u, 261u, 262u, 263u, 264u, 265u, 266u, 267u, 268u, 269u, 270u, 271u,
+    272u, 273u, 274u, 275u, 276u, 277u, 278u, 279u, 280u, 281u, 282u, 283u, 284u, 285u, 286u, 287u,
+    288u, 289u, 290u, 291u, 292u, 293u, 294u, 295u, 296u, 297u, 298u, 299u, 300u, 301u, 302u, 303u,
+    304u, 305u, 306u, 307u, 308u, 309u, 310u, 311u, 312u, 313u, 314u, 315u, 316u, 317u, 318u, 319u,
+    320u, 321u, 322u, 323u, 324u, 325u, 326u, 327u, 328u, 329u,
+};
+
 const asmkit_register_info_t* asmkit_gen_aarch64_register_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_register_infos)) {
@@ -107,13 +131,15 @@ const asmkit_register_info_t* asmkit_gen_aarch64_register_info_by_index(uint32_t
 
 const asmkit_register_info_t* asmkit_gen_aarch64_register_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_aarch64_register_infos); ++i) {
-        if (asmkit_aarch64_register_infos[i].id == id) {
-            return &asmkit_aarch64_register_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_register_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_aarch64_register_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_aarch64_register_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_aarch64_register_count(void)
@@ -122,6 +148,37 @@ uint32_t asmkit_gen_aarch64_register_count(void)
 }
 
 #include "asmkit_gen_aarch64_semantics_asmkit_aarch64_operand_type_infos.inc"
+
+static const uint32_t asmkit_aarch64_operand_type_info_index_by_id[] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u, 30u, 31u, 32u,
+    33u, 34u, 35u, 36u, 37u, 38u, 39u, 40u, 41u, 42u, 43u, 44u, 45u, 46u, 47u, 48u,
+    49u, 50u, 51u, 52u, 53u, 54u, 55u, 56u, 57u, 58u, 59u, 60u, 61u, 62u, 63u, 64u,
+    65u, 66u, 67u, 68u, 69u, 70u, 71u, 72u, 73u, 74u, 75u, 76u, 77u, 78u, 79u, 80u,
+    81u, 82u, 83u, 84u, 85u, 86u, 87u, 88u, 89u, 90u, 91u, 92u, 93u, 94u, 95u, 96u,
+    97u, 98u, 99u, 100u, 101u, 102u, 103u, 104u, 105u, 106u, 107u, 108u, 109u, 110u, 111u, 112u,
+    113u, 114u, 115u, 116u, 117u, 118u, 119u, 120u, 121u, 122u, 123u, 124u, 125u, 126u, 127u, 128u,
+    129u, 130u, 131u, 132u, 133u, 134u, 135u, 136u, 137u, 138u, 139u, 140u, 141u, 142u, 143u, 144u,
+    145u, 146u, 147u, 148u, 149u, 150u, 151u, 152u, 153u, 154u, 155u, 156u, 157u, 158u, 159u, 160u,
+    161u, 162u, 163u, 164u, 165u, 166u, 167u, 168u, 169u, 170u, 171u, 172u, 173u, 174u, 175u, 176u,
+    177u, 178u, 179u, 180u, 181u, 182u, 183u, 184u, 185u, 186u, 187u, 188u, 189u, 190u, 191u, 192u,
+    193u, 194u, 195u, 196u, 197u, 198u, 199u, 200u, 201u, 202u, 203u, 204u, 205u, 206u, 207u, 208u,
+    209u, 210u, 211u, 212u, 213u, 214u, 215u, 216u, 217u, 218u, 219u, 220u, 221u, 222u, 223u, 224u,
+    225u, 226u, 227u, 228u, 229u, 230u, 231u, 232u, 233u, 234u, 235u, 236u, 237u, 238u, 239u, 240u,
+    241u, 242u, 243u, 244u, 245u, 246u, 247u, 248u, 249u, 250u, 251u, 252u, 253u, 254u, 255u, 256u,
+    257u, 258u, 259u, 260u, 261u, 262u, 263u, 264u, 265u, 266u, 267u, 268u, 269u, 270u, 271u, 272u,
+    273u, 274u, 275u, 276u, 277u, 278u, 279u, 280u, 281u, 282u, 283u, 284u, 285u, 286u, 287u, 288u,
+    289u, 290u, 291u, 292u, 293u, 294u, 295u, 296u, 297u, 298u, 299u, 300u, 301u, 302u, 303u, 304u,
+    305u, 306u, 307u, 308u, 309u, 310u, 311u, 312u, 313u, 314u, 315u, 316u, 317u, 318u, 319u, 320u,
+    321u, 322u, 323u, 324u, 325u, 326u, 327u, 328u, 329u, 330u, 331u, 332u, 333u, 334u, 335u, 336u,
+    337u, 338u, 339u, 340u, 341u, 342u, 343u, 344u, 345u, 346u, 347u, 348u, 349u, 350u, 351u, 352u,
+    353u, 354u, 355u, 356u, 357u, 358u, 359u, 360u, 361u, 362u, 363u, 364u, 365u, 366u, 367u, 368u,
+    369u, 370u, 371u, 372u, 373u, 374u, 375u, 376u, 377u, 378u, 379u, 380u, 381u, 382u, 383u, 384u,
+    385u, 386u, 387u, 388u, 389u, 390u, 391u, 392u, 393u, 394u, 395u, 396u, 397u, 398u, 399u, 400u,
+    401u, 402u, 403u, 404u, 405u, 406u, 407u, 408u, 409u, 410u, 411u, 412u, 413u, 414u, 415u, 416u,
+    417u, 418u, 419u, 420u, 421u, 422u, 423u, 424u, 425u, 426u, 427u, 428u, 429u, 430u, 431u, 432u,
+    433u,
+};
 
 const asmkit_operand_type_info_t* asmkit_gen_aarch64_operand_type_info_by_index(uint32_t index)
 {
@@ -133,13 +190,15 @@ const asmkit_operand_type_info_t* asmkit_gen_aarch64_operand_type_info_by_index(
 
 const asmkit_operand_type_info_t* asmkit_gen_aarch64_operand_type_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_aarch64_operand_type_infos); ++i) {
-        if (asmkit_aarch64_operand_type_infos[i].id == id) {
-            return &asmkit_aarch64_operand_type_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_operand_type_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_aarch64_operand_type_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_aarch64_operand_type_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_aarch64_operand_type_count(void)
@@ -153,6 +212,8 @@ uint32_t asmkit_gen_aarch64_operand_type_count(void)
 
 #include "asmkit_gen_aarch64_semantics_asmkit_aarch64_instruction_infos.inc"
 
+#include "asmkit_gen_aarch64_semantics_asmkit_aarch64_instruction_info_index_by_id.inc"
+
 const asmkit_instruction_info_t* asmkit_gen_aarch64_instruction_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_instruction_infos)) {
@@ -163,18 +224,32 @@ const asmkit_instruction_info_t* asmkit_gen_aarch64_instruction_info_by_index(ui
 
 const asmkit_instruction_info_t* asmkit_gen_aarch64_instruction_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_aarch64_instruction_infos); ++i) {
-        if (asmkit_aarch64_instruction_infos[i].id == id) {
-            return &asmkit_aarch64_instruction_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_instruction_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_aarch64_instruction_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_aarch64_instruction_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_aarch64_instruction_count(void)
 {
     return (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_aarch64_instruction_infos);
+}
+
+const asmkit_operand_info_t* asmkit_gen_aarch64_instruction_operand_infos(uint32_t id, uint32_t* out_count)
+{
+    const asmkit_instruction_info_t* info;
+    if (out_count != 0) { *out_count = 0u; }
+    info = asmkit_gen_aarch64_instruction_info(id);
+    if (info == 0 || info->operand_info_count == 0u) {
+        return 0;
+    }
+    if (out_count != 0) { *out_count = info->operand_info_count; }
+    return &asmkit_aarch64_operand_infos[info->operand_info_index];
 }
 
 const asmkit_operand_info_t* asmkit_gen_aarch64_instruction_operand_info(uint32_t id, uint32_t operand_index)

@@ -1,0 +1,19 @@
+[package]
+name = "asmkit-yaxpeax-x86-capi"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "asmkit_yaxpeax_x86_capi"
+crate-type = ["staticlib"]
+
+[dependencies]
+yaxpeax-arch = { version = "0.3.1", default-features = false }
+yaxpeax-x86 = { path = "@ASMKIT_YAXPEAX_X86_SOURCE_DIR@", default-features = false }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

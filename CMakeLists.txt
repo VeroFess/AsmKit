@@ -5,6 +5,7 @@ option(ASMKIT_ENABLE_TEXT "Enable optional instruction text formatting" OFF)
 option(ASMKIT_ENABLE_TESTS "Build tests" ON)
 option(ASMKIT_FREESTANDING "Avoid libc-dependent code paths" ON)
 option(ASMKIT_ENABLE_ASAN "Enable AddressSanitizer for supported compilers" OFF)
+option(ASMKIT_ENABLE_BENCHMARKS "Build decode performance benchmarks" OFF)
 
 if(ASMKIT_ENABLE_ASAN)
   if(MSVC)
@@ -150,4 +151,9 @@ if(ASMKIT_ENABLE_TESTS)
     COMMAND ${CMAKE_COMMAND}
       -DROOT=${CMAKE_CURRENT_SOURCE_DIR}
       -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/allocation/scan_forbidden.cmake)
+endif()
+
+if(ASMKIT_ENABLE_BENCHMARKS)
+  enable_language(CXX)
+  add_subdirectory(tests/performance)
 endif()

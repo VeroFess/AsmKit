@@ -2,18 +2,53 @@
 
 static void asmkit_decode_apply_operand_metadata(asmkit_inst_t* inst)
 {
-    const asmkit_operand_info_t* info;
+    const asmkit_operand_info_t* infos;
+    uint32_t count;
+    uint32_t info_count;
     uint32_t index;
 
-    for (index = 0u; index < inst->operand_count && index < ASMKIT_MAX_OPERANDS; ++index) {
-        asmkit_operand_t* operand = &inst->operands[index];
-        if (asmkit_get_instruction_operand_info(inst->arch, inst->id, operand->operand_index, &info) == ASMKIT_OK && info != 0) {
-            operand->flags |= info->flags;
-            if (operand->width == 0u && info->width != 0u) {
-                operand->width = info->width;
-            }
-        }
+    if (inst->operand_count == 0u) {
+        return;
     }
+
+#define ASMKIT_APPLY_OPERAND_METADATA(get_infos_)                                                       \
+    do {                                                                                                \
+        infos = get_infos_(inst->id, &info_count);                                                      \
+        if (infos == 0) { break; }                                                                      \
+        count = inst->operand_count;                                                                    \
+        if (count > ASMKIT_MAX_OPERANDS) { count = ASMKIT_MAX_OPERANDS; }                                \
+        for (index = 0u; index < count; ++index) {                                                       \
+            asmkit_operand_t* operand = &inst->operands[index];                                          \
+            if (operand->operand_index >= info_count) { continue; }                                      \
+            const asmkit_operand_info_t* info = &infos[operand->operand_index];                          \
+            operand->flags |= info->flags;                                                              \
+            if (operand->width == 0u && info->width != 0u) {                                             \
+                operand->width = info->width;                                                            \
+            }                                                                                           \
+        }                                                                                               \
+    } while (0)
+
+    switch (inst->arch) {
+    case ASMKIT_ARCH_X86:
+        ASMKIT_APPLY_OPERAND_METADATA(asmkit_gen_x86_instruction_operand_infos);
+        break;
+    case ASMKIT_ARCH_ARM:
+        ASMKIT_APPLY_OPERAND_METADATA(asmkit_gen_arm_instruction_operand_infos);
+        break;
+    case ASMKIT_ARCH_AARCH64:
+        ASMKIT_APPLY_OPERAND_METADATA(asmkit_gen_aarch64_instruction_operand_infos);
+        break;
+    case ASMKIT_ARCH_BPF:
+        ASMKIT_APPLY_OPERAND_METADATA(asmkit_gen_bpf_instruction_operand_infos);
+        break;
+    case ASMKIT_ARCH_WASM:
+        ASMKIT_APPLY_OPERAND_METADATA(asmkit_gen_wasm_instruction_operand_infos);
+        break;
+    default:
+        break;
+    }
+
+#undef ASMKIT_APPLY_OPERAND_METADATA
 }
 
 asmkit_status_t asmkit_decode_one(

@@ -143,6 +143,11 @@ static const asmkit_register_info_t asmkit_bpf_register_infos[] = {
     {ASMKIT_BPF_REG_R11, ASMKIT_ARCH_BPF, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("r11"), 11u, 0u, 64u, ASMKIT_REGISTER_FLAG_STACK_POINTER},
 };
 
+static const uint32_t asmkit_bpf_register_info_index_by_id[] = {
+    0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u,
+    16u, 17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u,
+};
+
 const asmkit_register_info_t* asmkit_gen_bpf_register_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_register_infos)) {
@@ -153,13 +158,15 @@ const asmkit_register_info_t* asmkit_gen_bpf_register_info_by_index(uint32_t ind
 
 const asmkit_register_info_t* asmkit_gen_bpf_register_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_bpf_register_infos); ++i) {
-        if (asmkit_bpf_register_infos[i].id == id) {
-            return &asmkit_bpf_register_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_register_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_bpf_register_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_bpf_register_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_bpf_register_count(void)
@@ -189,6 +196,11 @@ static const asmkit_operand_type_info_t asmkit_bpf_operand_type_infos[] = {
     {18u, ASMKIT_ARCH_BPF, ASMKIT_GENERATED_OPTIONAL_TEXT_LITERAL("BPF_PSEUDO_KIND4"), ASMKIT_OP_IMM, ASMKIT_OPERAND_ENCODING_IMMEDIATE, 4u},
 };
 
+static const uint32_t asmkit_bpf_operand_type_info_index_by_id[] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u,
+};
+
 const asmkit_operand_type_info_t* asmkit_gen_bpf_operand_type_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_operand_type_infos)) {
@@ -199,13 +211,15 @@ const asmkit_operand_type_info_t* asmkit_gen_bpf_operand_type_info_by_index(uint
 
 const asmkit_operand_type_info_t* asmkit_gen_bpf_operand_type_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_bpf_operand_type_infos); ++i) {
-        if (asmkit_bpf_operand_type_infos[i].id == id) {
-            return &asmkit_bpf_operand_type_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_operand_type_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_bpf_operand_type_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_bpf_operand_type_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_bpf_operand_type_count(void)
@@ -308,6 +322,21 @@ static const asmkit_instruction_register_effect_t asmkit_bpf_register_effect_inf
 
 #include "asmkit_gen_bpf_semantics_asmkit_bpf_instruction_infos.inc"
 
+static const uint32_t asmkit_bpf_instruction_info_index_by_id[] = {
+    1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u,
+    17u, 18u, 19u, 20u, 21u, 22u, 23u, 24u, 25u, 26u, 27u, 28u, 29u, 30u, 31u, 32u,
+    33u, 34u, 35u, 36u, 37u, 38u, 39u, 40u, 41u, 42u, 43u, 44u, 45u, 46u, 47u, 48u,
+    49u, 50u, 51u, 52u, 53u, 54u, 55u, 56u, 57u, 58u, 59u, 60u, 61u, 62u, 63u, 64u,
+    65u, 66u, 67u, 68u, 69u, 70u, 71u, 72u, 73u, 74u, 75u, 76u, 77u, 78u, 79u, 80u,
+    81u, 82u, 83u, 84u, 85u, 86u, 87u, 88u, 89u, 90u, 91u, 92u, 93u, 94u, 95u, 96u,
+    97u, 98u, 99u, 100u, 101u, 102u, 103u, 104u, 105u, 106u, 107u, 108u, 109u, 110u, 111u, 112u,
+    113u, 114u, 115u, 116u, 117u, 118u, 119u, 120u, 121u, 122u, 123u, 124u, 125u, 126u, 127u, 128u,
+    129u, 130u, 131u, 132u, 133u, 134u, 135u, 136u, 137u, 138u, 139u, 140u, 141u, 142u, 143u, 144u,
+    145u, 146u, 147u, 148u, 149u, 150u, 151u, 152u, 153u, 154u, 155u, 156u, 157u, 158u, 159u, 160u,
+    161u, 162u, 163u, 164u, 165u, 166u, 167u, 168u, 169u, 170u, 171u, 172u, 173u, 174u, 175u, 176u,
+    177u, 178u, 179u,
+};
+
 const asmkit_instruction_info_t* asmkit_gen_bpf_instruction_info_by_index(uint32_t index)
 {
     if (index >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_instruction_infos)) {
@@ -318,18 +347,32 @@ const asmkit_instruction_info_t* asmkit_gen_bpf_instruction_info_by_index(uint32
 
 const asmkit_instruction_info_t* asmkit_gen_bpf_instruction_info(uint32_t id)
 {
-    size_t i;
-    for (i = 0; i < ASMKIT_ARRAY_COUNT(asmkit_bpf_instruction_infos); ++i) {
-        if (asmkit_bpf_instruction_infos[i].id == id) {
-            return &asmkit_bpf_instruction_infos[i];
-        }
+    uint32_t index;
+    if (id >= (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_instruction_info_index_by_id)) {
+        return 0;
     }
-    return 0;
+    index = asmkit_bpf_instruction_info_index_by_id[id];
+    if (index == 0u) {
+        return 0;
+    }
+    return &asmkit_bpf_instruction_infos[index - 1u];
 }
 
 uint32_t asmkit_gen_bpf_instruction_count(void)
 {
     return (uint32_t)ASMKIT_ARRAY_COUNT(asmkit_bpf_instruction_infos);
+}
+
+const asmkit_operand_info_t* asmkit_gen_bpf_instruction_operand_infos(uint32_t id, uint32_t* out_count)
+{
+    const asmkit_instruction_info_t* info;
+    if (out_count != 0) { *out_count = 0u; }
+    info = asmkit_gen_bpf_instruction_info(id);
+    if (info == 0 || info->operand_info_count == 0u) {
+        return 0;
+    }
+    if (out_count != 0) { *out_count = info->operand_info_count; }
+    return &asmkit_bpf_operand_infos[info->operand_info_index];
 }
 
 const asmkit_operand_info_t* asmkit_gen_bpf_instruction_operand_info(uint32_t id, uint32_t operand_index)
