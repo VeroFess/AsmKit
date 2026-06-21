@@ -49,6 +49,26 @@ int asmkit_test_emit(void)
     ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
     ASMKIT_CHECK(encode_result.size == 5u && out[0] == 0xe8u && asmkit_test_load32le(out + 1) == 0x0bu);
 
+    asmkit_inst_init(&inst, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, ASMKIT_X86_JNE);
+    inst.address = 0x1000u;
+    ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_branch_target(0x1010u)) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
+    ASMKIT_CHECK(encode_result.size == 2u && out[0] == 0x75u && out[1] == 0x0eu);
+
+    asmkit_inst_init(&inst, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, ASMKIT_X86_JE);
+    inst.address = 0x1000u;
+    ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_branch_target(0x2000u)) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
+    ASMKIT_CHECK(encode_result.size == 6u && out[0] == 0x0fu && out[1] == 0x84u && asmkit_test_load32le(out + 2) == 0xffau);
+
+    {
+        uint8_t x86_jne_zero[] = {0x75u, 0x00u};
+        ASMKIT_CHECK(asmkit_decode_one(&engine, 0, x86_jne_zero, sizeof(x86_jne_zero), 0x1000u, &inst) == ASMKIT_OK);
+        ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_JNE);
+        ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
+        ASMKIT_CHECK(encode_result.size == 2u && out[0] == 0x75u && out[1] == 0x00u);
+    }
+
     asmkit_inst_init(&inst, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, ASMKIT_X86_ADD);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_reg(ASMKIT_X86_REG_EAX, 32u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 1u, asmkit_operand_reg(ASMKIT_X86_REG_ECX, 32u)) == ASMKIT_OK);
@@ -116,6 +136,15 @@ int asmkit_test_emit(void)
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 1u, asmkit_operand_reg(ASMKIT_X86_REG_ECX, 32u)) == ASMKIT_OK);
     ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
     ASMKIT_CHECK(encode_result.size == 3u && out[0] == 0x89u && out[1] == 0x48u && out[2] == 0x08u);
+
+    inst.flags = ASMKIT_INST_FLAG_X86_LOCK;
+    ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_ERR_UNSUPPORTED_INSTRUCTION);
+
+    asmkit_inst_init(&inst, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, ASMKIT_X86_INC);
+    inst.flags = ASMKIT_INST_FLAG_X86_LOCK;
+    ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_mem(ASMKIT_X86_REG_RAX, 0, 32u)) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_encode_inst(&engine, 0, &inst, 0, out, sizeof(out), &encode_result) == ASMKIT_OK);
+    ASMKIT_CHECK(encode_result.size == 3u && out[0] == 0xf0u && out[1] == 0xffu && out[2] == 0x00u);
 
     asmkit_inst_init(&inst, ASMKIT_ARCH_X86, ASMKIT_MODE_X86_64, ASMKIT_X86_MOV);
     ASMKIT_CHECK(asmkit_inst_set_operand(&inst, 0u, asmkit_operand_mem_full(ASMKIT_X86_REG_RAX, ASMKIT_X86_REG_RCX, 4u, 0x20, 32u, 64u)) == ASMKIT_OK);

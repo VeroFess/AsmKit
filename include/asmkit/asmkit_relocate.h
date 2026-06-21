@@ -39,12 +39,22 @@ typedef struct asmkit_relocate_options {
     uint32_t flags;
 } asmkit_relocate_options_t;
 
+typedef struct asmkit_relocated_inst {
+    uint64_t original_address;
+    uint32_t original_size;
+    uint64_t relocated_address;
+    uint32_t relocated_offset;
+    uint32_t relocated_size;
+} asmkit_relocated_inst_t;
+
 typedef struct asmkit_relocate_result {
     uint32_t overwritten_size;
     uint64_t original_address;
     uint64_t continuation_address;
     uint64_t relocated_address;
     uint32_t relocated_size;
+    uint32_t relocated_inst_count;
+    asmkit_relocated_inst_t relocated_insts[ASMKIT_MAX_BLOCK_INSTRUCTIONS];
     uint32_t jump_back_offset;
     uint32_t jump_back_size;
     uint64_t clobber_mask_lo;

@@ -141,6 +141,8 @@ asmkit_status_t asmkit_relocate_prologue(
 
     offset = 0u;
     for (i = 0u; i < block.inst_count; ++i) {
+        uint32_t inst_offset;
+        inst_offset = offset;
         status = asmkit_analyze_inst(engine, workspace, &insts[i], &sem);
         if (status != ASMKIT_OK) {
             return status;
@@ -156,6 +158,11 @@ asmkit_status_t asmkit_relocate_prologue(
             out_result->clobber_mask_hi |= emit.clobber_mask_hi;
             return ASMKIT_ERR_FORBIDDEN_CLOBBER;
         }
+        out_result->relocated_insts[i].original_address = insts[i].address;
+        out_result->relocated_insts[i].original_size = insts[i].size;
+        out_result->relocated_insts[i].relocated_address = relocated_address + inst_offset;
+        out_result->relocated_insts[i].relocated_offset = inst_offset;
+        out_result->relocated_insts[i].relocated_size = emit.size;
         offset += emit.size;
         out_result->clobber_mask_lo |= emit.clobber_mask_lo;
         out_result->clobber_mask_hi |= emit.clobber_mask_hi;
@@ -182,6 +189,7 @@ asmkit_status_t asmkit_relocate_prologue(
     out_result->relocated_address = relocated_address;
     out_result->jump_back_size = emit.size;
     out_result->relocated_size = offset + emit.size;
+    out_result->relocated_inst_count = block.inst_count;
     out_result->clobber_mask_lo |= emit.clobber_mask_lo;
     out_result->clobber_mask_hi |= emit.clobber_mask_hi;
     return ASMKIT_OK;

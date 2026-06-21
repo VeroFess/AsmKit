@@ -463,6 +463,7 @@ int asmkit_test_decode(void)
     uint8_t x86_jcc_short_back[] = {0x75u, 0xfeu};
     uint8_t x86_movsb[] = {0xa4u};
     uint8_t x86_movsq[] = {0x48u, 0xa5u};
+    uint8_t x86_xchg_ecx_mrax[] = {0x87u, 0x08u};
     uint8_t x86_moffs64_load[] = {
         0x48u, 0xa1u, 0x88u, 0x77u, 0x66u, 0x55u, 0x44u, 0x33u, 0x22u, 0x11u
     };
@@ -651,6 +652,14 @@ int asmkit_test_decode(void)
     ASMKIT_CHECK(inst.operands[0].mem.base == ASMKIT_X86_REG_RDI && inst.operands[0].mem.address_width == 64u);
     ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_MEM && inst.operands[1].width == 64u);
     ASMKIT_CHECK(inst.operands[1].mem.base == ASMKIT_X86_REG_RSI && inst.operands[1].mem.address_width == 64u);
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, x86_xchg_ecx_mrax, sizeof(x86_xchg_ecx_mrax), 0x1000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK(inst.mnemonic_id == ASMKIT_X86_XCHG);
+    ASMKIT_CHECK(inst.operand_count == 2u);
+    ASMKIT_CHECK(inst.operands[0].kind == ASMKIT_OP_REG && inst.operands[0].reg == ASMKIT_X86_REG_ECX);
+    ASMKIT_CHECK(inst.operands[1].kind == ASMKIT_OP_MEM && inst.operands[1].mem.base == ASMKIT_X86_REG_RAX);
+    ASMKIT_CHECK(asmkit_get_instruction_operand_info(inst.arch, inst.id, 1u, &operand_info) == ASMKIT_OK);
+    ASMKIT_CHECK((operand_info->flags & ASMKIT_OPERAND_FLAG_READ) != 0u);
+    ASMKIT_CHECK((operand_info->flags & ASMKIT_OPERAND_FLAG_WRITE) != 0u);
     ASMKIT_CHECK(asmkit_decode_one(&engine, 0, x86_moffs64_load, sizeof(x86_moffs64_load), 0x1000u, &inst) == ASMKIT_OK);
     ASMKIT_CHECK(inst.size == sizeof(x86_moffs64_load));
     ASMKIT_CHECK(inst.inst_class == ASMKIT_INST_LOAD);

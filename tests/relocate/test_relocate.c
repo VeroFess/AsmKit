@@ -36,6 +36,17 @@ int asmkit_test_relocate(void)
     ASMKIT_CHECK(asmkit_relocate_prologue(&engine, 0, prologue, sizeof(prologue), 0x1000u, 0x2000u, &options, out, sizeof(out), &result) == ASMKIT_OK);
     ASMKIT_CHECK(result.overwritten_size == 4u);
     ASMKIT_CHECK(result.relocated_size == 9u);
+    ASMKIT_CHECK(result.relocated_inst_count == 2u);
+    ASMKIT_CHECK(result.relocated_insts[0].original_address == 0x1000u);
+    ASMKIT_CHECK(result.relocated_insts[0].original_size == 1u);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_address == 0x2000u);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_offset == 0u);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_size == 1u);
+    ASMKIT_CHECK(result.relocated_insts[1].original_address == 0x1001u);
+    ASMKIT_CHECK(result.relocated_insts[1].original_size == 3u);
+    ASMKIT_CHECK(result.relocated_insts[1].relocated_address == 0x2001u);
+    ASMKIT_CHECK(result.relocated_insts[1].relocated_offset == 1u);
+    ASMKIT_CHECK(result.relocated_insts[1].relocated_size == 3u);
     ASMKIT_CHECK(out[0] == 0x55u && out[1] == 0x48u && out[2] == 0x89u && out[3] == 0xe5u);
     ASMKIT_CHECK(out[4] == 0xe9u);
 
@@ -86,6 +97,12 @@ int asmkit_test_relocate(void)
     ASMKIT_CHECK(result.overwritten_size == 2u);
     ASMKIT_CHECK(result.jump_back_offset == 16u);
     ASMKIT_CHECK(result.relocated_size == 30u);
+    ASMKIT_CHECK(result.relocated_inst_count == 1u);
+    ASMKIT_CHECK(result.relocated_insts[0].original_address == 0x1000u);
+    ASMKIT_CHECK(result.relocated_insts[0].original_size == 2u);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_address == 0x1000000000ull);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_offset == 0u);
+    ASMKIT_CHECK(result.relocated_insts[0].relocated_size == 16u);
     ASMKIT_CHECK(out[0] == 0x74u && out[1] == 14u);
     ASMKIT_CHECK(out[2] == 0xffu && out[3] == 0x25u);
     ASMKIT_CHECK(asmkit_test_load32le(out + 4) == 0u);

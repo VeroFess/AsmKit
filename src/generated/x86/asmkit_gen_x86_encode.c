@@ -96,6 +96,7 @@ typedef struct asmkit_x86_encode_record {
     uint8_t round_operand;
     uint8_t suffix_imm8;
     uint8_t is_nd;
+    uint8_t allow_lock_prefix;
     uint64_t feature_bits[ASMKIT_FEATURE_WORD_COUNT];
 } asmkit_x86_encode_record_t;
 
@@ -841,6 +842,9 @@ static int x86_append_vector_prefix(
 
 static int x86_record_identity_matches(const asmkit_x86_encode_record_t* ASMKIT_RESTRICT_X86_CONST record, const asmkit_inst_t* ASMKIT_RESTRICT_X86_CONST inst)
 {
+    if (record->id == ASMKIT_X86_JCC_REL) {
+        return (inst->id == 0u || inst->id == record->id) && inst->mnemonic_id != ASMKIT_MNEMONIC_INVALID && inst->mnemonic_id == record->mnemonic_id;
+    }
     if (inst->id == record->id) {
         return 1;
     }
@@ -1049,7 +1053,13 @@ static asmkit_status_t x86_encode_record_bytes(const asmkit_engine_t* ASMKIT_RES
     if (record->vector_type != ASMKIT_X86_TD_ENC_NORMAL && ((has_rm && rm.byte_forbids_rex != 0u) || (has_reg && reg.byte_forbids_rex != 0u) || (has_opcode_reg && opcode_reg.byte_forbids_rex != 0u) || (has_vvvv && vvvv.byte_forbids_rex != 0u) || (has_imm_reg && imm_reg.byte_forbids_rex != 0u))) {
         return ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
     }
+    if ((inst->flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u) {
+        if (record->allow_lock_prefix == 0u || !has_rm || record->rm_operand >= record->operand_count || inst->operands[record->rm_operand].kind != ASMKIT_OP_MEM) {
+            return ASMKIT_ERR_UNSUPPORTED_INSTRUCTION;
+        }
+    }
 
+    if ((inst->flags & ASMKIT_INST_FLAG_X86_LOCK) != 0u && !x86_append_u8(temp, &size, 0xf0u)) { return ASMKIT_ERR_ENCODE_FAILED; }
     if (!x86_append_prefixes(engine, record, temp, &size)) { return ASMKIT_ERR_ENCODE_FAILED; }
     if (!has_rm && raw_address_prefix != 0u && !x86_append_u8(temp, &size, raw_address_prefix)) { return ASMKIT_ERR_ENCODE_FAILED; }
     if (!has_rm && raw_segment_prefix != 0u && !x86_append_u8(temp, &size, raw_segment_prefix)) { return ASMKIT_ERR_ENCODE_FAILED; }

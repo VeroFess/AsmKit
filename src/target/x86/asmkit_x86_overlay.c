@@ -2,6 +2,7 @@
 #include "asmkit_gen_x86_defs.h"
 #include "asmkit_gen_x86_mnemonics.h"
 
+static uint64_t x86_pc_relative_operand_target(const asmkit_inst_t* ASMKIT_RESTRICT inst, const asmkit_operand_t* ASMKIT_RESTRICT operand);
 static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint8_t* ASMKIT_RESTRICT out_index);
 
 static asmkit_status_t x86_decode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const uint8_t* ASMKIT_RESTRICT code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT out_inst)
@@ -113,21 +114,23 @@ static asmkit_status_t x86_analyze(const asmkit_engine_t* ASMKIT_RESTRICT engine
     }
     if ((inst->flags & ASMKIT_INST_FLAG_PC_RELATIVE) != 0u && inst->operand_count > 0u) {
         const asmkit_operand_t* pc_operand;
+        uint64_t target;
         uint8_t pc_operand_index;
         pc_operand = x86_pc_rel_operand(inst, &pc_operand_index);
         if (pc_operand == 0) {
             return ASMKIT_OK;
         }
+        target = x86_pc_relative_operand_target(inst, pc_operand);
         out_semantics->hazard_flags |= ASMKIT_HAZARD_PC_RELATIVE;
         out_semantics->pc_rel.is_pc_relative = true;
-        out_semantics->pc_rel.original_target = pc_operand->abs_target;
+        out_semantics->pc_rel.original_target = target;
         out_semantics->pc_rel.operand_index = pc_operand_index;
         out_semantics->pc_rel.is_control_flow =
             inst->inst_class == ASMKIT_INST_DIRECT_BRANCH ||
             inst->inst_class == ASMKIT_INST_COND_BRANCH ||
             inst->inst_class == ASMKIT_INST_DIRECT_CALL;
         out_semantics->branch.has_target = out_semantics->pc_rel.is_control_flow;
-        out_semantics->branch.target = pc_operand->abs_target;
+        out_semantics->branch.target = target;
         x86_set_branch_limits(&out_semantics->branch, pc_operand->width);
         out_semantics->reloc_kind = ASMKIT_RELOC_REENCODE_WITH_NEW_PC;
         out_semantics->max_emit_size = inst->inst_class == ASMKIT_INST_COND_BRANCH ? 16u : 14u;
@@ -225,6 +228,17 @@ static uint64_t x86_branch_target(const asmkit_engine_t* ASMKIT_RESTRICT engine,
         return operand->abs_target;
     }
     return inst->address + (uint64_t)direct_size + (uint64_t)operand->imm;
+}
+
+static uint64_t x86_pc_relative_operand_target(const asmkit_inst_t* ASMKIT_RESTRICT inst, const asmkit_operand_t* ASMKIT_RESTRICT operand)
+{
+    if (operand->kind == ASMKIT_OP_MEM && operand->mem.base == ASMKIT_X86_REG_RIP && operand->abs_target == 0u) {
+        return inst->address + (uint64_t)inst->size + (uint64_t)operand->mem.displacement;
+    }
+    if (operand->abs_target != 0u || operand->imm == 0) {
+        return operand->abs_target;
+    }
+    return inst->address + (uint64_t)inst->size + (uint64_t)operand->imm;
 }
 
 static const asmkit_operand_t* x86_pc_rel_operand(const asmkit_inst_t* ASMKIT_RESTRICT inst, uint8_t* ASMKIT_RESTRICT out_index)
@@ -382,20 +396,35 @@ static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engin
     asmkit_zero(out_result, sizeof(*out_result));
 
     if (inst->inst_class == ASMKIT_INST_DIRECT_CALL) {
-        status = asmkit_gen_x86_emit_rel(engine, 1, relocated_address, inst->operands[0].abs_target, out_code, out_capacity, out_result);
+        uint64_t target;
+        if (inst->operand_count == 0u) {
+            return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
+        }
+        target = x86_pc_relative_operand_target(inst, &inst->operands[0]);
+        status = asmkit_gen_x86_emit_rel(engine, 1, relocated_address, target, out_code, out_capacity, out_result);
         if (status == ASMKIT_OK || status == ASMKIT_ERR_OUTPUT_TOO_SMALL || engine->config.mode != ASMKIT_MODE_X86_64) {
             return status;
         }
-        return x86_emit_abs(engine, 1, inst->operands[0].abs_target, out_code, out_capacity, out_result);
+        return x86_emit_abs(engine, 1, target, out_code, out_capacity, out_result);
     }
     if (inst->inst_class == ASMKIT_INST_DIRECT_BRANCH) {
-        status = asmkit_gen_x86_emit_rel(engine, 0, relocated_address, inst->operands[0].abs_target, out_code, out_capacity, out_result);
+        uint64_t target;
+        if (inst->operand_count == 0u) {
+            return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
+        }
+        target = x86_pc_relative_operand_target(inst, &inst->operands[0]);
+        status = asmkit_gen_x86_emit_rel(engine, 0, relocated_address, target, out_code, out_capacity, out_result);
         if (status == ASMKIT_OK || status == ASMKIT_ERR_OUTPUT_TOO_SMALL || engine->config.mode != ASMKIT_MODE_X86_64) {
             return status;
         }
-        return x86_emit_abs(engine, 0, inst->operands[0].abs_target, out_code, out_capacity, out_result);
+        return x86_emit_abs(engine, 0, target, out_code, out_capacity, out_result);
     }
     if (inst->inst_class == ASMKIT_INST_COND_BRANCH) {
+        uint64_t target;
+        if (inst->operand_count == 0u) {
+            return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
+        }
+        target = x86_pc_relative_operand_target(inst, &inst->operands[0]);
         if (!x86_find_opcode(inst, &op_off)) {
             return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
         }
@@ -404,7 +433,7 @@ static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engin
             op = inst->bytes[op_off + 1u];
         }
         if ((op >= 0x70u && op <= 0x7fu) || (op >= 0x80u && op <= 0x8fu)) {
-            status = x86_emit_jcc((uint8_t)(op & 0x0fu), relocated_address, inst->operands[0].abs_target, out_code, out_capacity, out_result);
+            status = x86_emit_jcc((uint8_t)(op & 0x0fu), relocated_address, target, out_code, out_capacity, out_result);
             if (status == ASMKIT_OK || status == ASMKIT_ERR_OUTPUT_TOO_SMALL || engine->config.mode != ASMKIT_MODE_X86_64) {
                 return status;
             }
@@ -414,7 +443,7 @@ static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engin
             }
             out_code[0] = (uint8_t)(0x70u | ((op ^ 1u) & 0x0fu));
             out_code[1] = 14u;
-            status = x86_emit_abs(engine, 0, inst->operands[0].abs_target, out_code + 2, out_capacity - 2u, out_result);
+            status = x86_emit_abs(engine, 0, target, out_code + 2, out_capacity - 2u, out_result);
             if (status != ASMKIT_OK) {
                 return status;
             }
@@ -425,6 +454,7 @@ static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engin
     }
     if ((inst->flags & ASMKIT_INST_FLAG_PC_RELATIVE) != 0u && inst->operand_count > 0u) {
         const asmkit_operand_t* pc_operand;
+        uint64_t target;
         if (!x86_find_rip_disp(inst, &disp_off)) {
             return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
         }
@@ -432,7 +462,8 @@ static asmkit_status_t x86_relocate(const asmkit_engine_t* ASMKIT_RESTRICT engin
         if (pc_operand == 0) {
             return ASMKIT_ERR_UNSUPPORTED_RELOCATION;
         }
-        disp = (int64_t)pc_operand->abs_target - (int64_t)(relocated_address + inst->size);
+        target = x86_pc_relative_operand_target(inst, pc_operand);
+        disp = (int64_t)target - (int64_t)(relocated_address + inst->size);
         if (!asmkit_i64_fits_i32(disp)) {
             return ASMKIT_ERR_BRANCH_OUT_OF_RANGE;
         }

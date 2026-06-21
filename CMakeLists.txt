@@ -142,12 +142,14 @@ target_include_directories(asmkit
     ${CMAKE_CURRENT_SOURCE_DIR}/src/generated/wasm)
 
 target_compile_definitions(asmkit PUBLIC ASMKIT_ENABLE_TEXT=$<BOOL:${ASMKIT_ENABLE_TEXT}>)
-target_sources(asmkit PRIVATE
-  src/generated/x86/asmkit_gen_x86_text.c
-  src/generated/arm/asmkit_gen_arm_text.c
-  src/generated/aarch64/asmkit_gen_aarch64_text.c
-  src/generated/bpf/asmkit_gen_bpf_text.c
-  src/generated/wasm/asmkit_gen_wasm_text.c)
+if(ASMKIT_ENABLE_TEXT)
+  target_sources(asmkit PRIVATE
+    src/generated/x86/asmkit_gen_x86_text.c
+    src/generated/arm/asmkit_gen_arm_text.c
+    src/generated/aarch64/asmkit_gen_aarch64_text.c
+    src/generated/bpf/asmkit_gen_bpf_text.c
+    src/generated/wasm/asmkit_gen_wasm_text.c)
+endif()
 if(ASMKIT_FREESTANDING)
   target_compile_definitions(asmkit PUBLIC ASMKIT_FREESTANDING=1)
 endif()
