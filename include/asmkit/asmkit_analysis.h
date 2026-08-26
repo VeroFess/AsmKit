@@ -68,6 +68,56 @@ typedef struct asmkit_inst_semantics {
     uint64_t clobber_mask_hi;
 } asmkit_inst_semantics_t;
 
+typedef enum asmkit_isa_state_kind {
+    ASMKIT_ISA_STATE_NONE = 0,
+    ASMKIT_ISA_STATE_ARM_IT
+} asmkit_isa_state_kind_t;
+
+typedef struct asmkit_isa_state {
+    asmkit_isa_state_kind_t kind;
+    uint8_t arm_itstate;
+} asmkit_isa_state_t;
+
+typedef struct asmkit_decode_state {
+    asmkit_mode_t mode;
+    asmkit_isa_state_t isa;
+} asmkit_decode_state_t;
+
+typedef enum asmkit_execution_predicate_kind {
+    ASMKIT_EXECUTION_PREDICATE_ALWAYS = 0,
+    ASMKIT_EXECUTION_PREDICATE_ARM_CONDITION
+} asmkit_execution_predicate_kind_t;
+
+typedef struct asmkit_execution_predicate {
+    asmkit_execution_predicate_kind_t kind;
+    uint32_t predicate_id;
+    bool inverted;
+} asmkit_execution_predicate_t;
+
+typedef enum asmkit_flow_kind {
+    ASMKIT_FLOW_FALLTHROUGH = 0,
+    ASMKIT_FLOW_BRANCH,
+    ASMKIT_FLOW_CALL,
+    ASMKIT_FLOW_RETURN,
+    ASMKIT_FLOW_TRAP
+} asmkit_flow_kind_t;
+
+typedef struct asmkit_successor_state_transition {
+    asmkit_flow_kind_t flow;
+    asmkit_decode_state_t state;
+} asmkit_successor_state_transition_t;
+
+enum {
+    ASMKIT_MAX_SUCCESSOR_STATES = 2u
+};
+
+typedef struct asmkit_control_analysis {
+    asmkit_inst_semantics_t semantics;
+    asmkit_execution_predicate_t predicate;
+    uint32_t successor_count;
+    asmkit_successor_state_transition_t successors[ASMKIT_MAX_SUCCESSOR_STATES];
+} asmkit_control_analysis_t;
+
 struct asmkit_engine;
 struct asmkit_workspace;
 
@@ -76,6 +126,13 @@ asmkit_status_t asmkit_analyze_inst(
     struct asmkit_workspace* workspace,
     const asmkit_inst_t* inst,
     asmkit_inst_semantics_t* out_semantics);
+
+asmkit_status_t asmkit_analyze_inst_with_state(
+    const struct asmkit_engine* engine,
+    struct asmkit_workspace* workspace,
+    const asmkit_inst_t* inst,
+    const asmkit_decode_state_t* state,
+    asmkit_control_analysis_t* out_analysis);
 
 #ifdef __cplusplus
 }

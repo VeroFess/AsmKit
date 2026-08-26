@@ -90,6 +90,7 @@ set(ASMKIT_CORE_SOURCES
   src/core/asmkit_engine.c
   src/core/asmkit_error.c
   src/core/asmkit_metadata.c
+  src/core/asmkit_target.c
   src/core/asmkit_workspace.c
   src/decode/asmkit_decode.c
   src/analysis/asmkit_analysis.c

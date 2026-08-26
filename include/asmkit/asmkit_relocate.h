@@ -87,6 +87,15 @@ asmkit_status_t asmkit_relocate_prologue(
     size_t out_capacity,
     asmkit_relocate_result_t* out_result);
 
+asmkit_status_t asmkit_relocate_inst(
+    const struct asmkit_engine* engine,
+    struct asmkit_workspace* workspace,
+    const asmkit_inst_t* inst,
+    uint64_t relocated_address,
+    uint8_t* out_code,
+    size_t out_capacity,
+    asmkit_emit_result_t* out_result);
+
 #ifdef __cplusplus
 }
 #endif

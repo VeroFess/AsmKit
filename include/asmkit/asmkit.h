@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "asmkit/asmkit_arch.h"
 #include "asmkit/asmkit_error.h"
+#include "asmkit/asmkit_target.h"
 #include "asmkit/asmkit_decode.h"
 #include "asmkit/asmkit_metadata.h"
 #include "asmkit/asmkit_bpf.h"

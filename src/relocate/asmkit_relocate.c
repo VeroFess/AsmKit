@@ -8,6 +8,27 @@ static asmkit_branch_mode_t asmkit_plan_branch_mode(const asmkit_detour_plan_opt
     return options->branch_mode;
 }
 
+asmkit_status_t asmkit_relocate_inst(
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const asmkit_inst_t* ASMKIT_RESTRICT inst,
+    uint64_t relocated_address,
+    uint8_t* ASMKIT_RESTRICT out_code,
+    size_t out_capacity,
+    asmkit_emit_result_t* ASMKIT_RESTRICT out_result)
+{
+    const asmkit_target_ops_t* ops;
+
+    if (engine == 0 || inst == 0 || out_code == 0 || out_result == 0) {
+        return ASMKIT_ERR_INVALID_ARGUMENT;
+    }
+    ops = asmkit_engine_ops(engine);
+    if (ops == 0 || ops->relocate_inst == 0) {
+        return ASMKIT_ERR_UNSUPPORTED_ARCH;
+    }
+    return ops->relocate_inst(engine, workspace, inst, relocated_address, out_code, out_capacity, out_result);
+}
+
 asmkit_status_t asmkit_plan_detour(
     const asmkit_engine_t* engine,
     asmkit_workspace_t* workspace,

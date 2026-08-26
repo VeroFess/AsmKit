@@ -43,6 +43,22 @@ typedef struct asmkit_encode_result {
     uint32_t flags;
 } asmkit_encode_result_t;
 
+typedef enum asmkit_control_transfer_kind {
+    ASMKIT_CONTROL_TRANSFER_JUMP = 0,
+    ASMKIT_CONTROL_TRANSFER_CALL
+} asmkit_control_transfer_kind_t;
+
+typedef struct asmkit_control_transfer_plan {
+    asmkit_control_transfer_kind_t kind;
+    uint32_t size;
+    uint32_t required_alignment;
+    uint64_t clobber_mask_lo;
+    uint64_t clobber_mask_hi;
+    bool requires_island;
+    int64_t island_min_distance;
+    int64_t island_max_distance;
+} asmkit_control_transfer_plan_t;
+
 struct asmkit_engine;
 struct asmkit_workspace;
 
@@ -74,6 +90,22 @@ asmkit_status_t asmkit_emit_call(
     uint8_t* out_code,
     size_t out_capacity,
     asmkit_emit_result_t* out_result);
+
+asmkit_status_t asmkit_plan_control_transfer(
+    const struct asmkit_engine* engine,
+    struct asmkit_workspace* workspace,
+    asmkit_control_transfer_kind_t kind,
+    uint64_t from_address,
+    uint64_t to_address,
+    const asmkit_emit_options_t* options,
+    asmkit_control_transfer_plan_t* out_plan);
+
+asmkit_status_t asmkit_emit_padding(
+    const struct asmkit_engine* engine,
+    uint32_t size,
+    uint8_t* out_code,
+    size_t out_capacity,
+    asmkit_encode_result_t* out_result);
 
 #ifdef __cplusplus
 }

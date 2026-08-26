@@ -76,6 +76,40 @@ asmkit_status_t asmkit_decode_one(
     return status;
 }
 
+asmkit_status_t asmkit_decode_one_ex(
+    const asmkit_engine_t* ASMKIT_RESTRICT engine,
+    asmkit_workspace_t* ASMKIT_RESTRICT workspace,
+    const uint8_t* ASMKIT_RESTRICT code,
+    size_t code_size,
+    uint64_t address,
+    asmkit_inst_t* ASMKIT_RESTRICT out_inst,
+    asmkit_decode_failure_kind_t* ASMKIT_RESTRICT out_failure)
+{
+    asmkit_target_capabilities_t capabilities;
+    asmkit_status_t status;
+
+    if (out_failure == 0) {
+        return ASMKIT_ERR_INVALID_ARGUMENT;
+    }
+    *out_failure = ASMKIT_DECODE_FAILURE_NONE;
+    status = asmkit_get_target_capabilities(engine, &capabilities);
+    if (status != ASMKIT_OK) {
+        return status;
+    }
+    if (code_size < capabilities.minimum_instruction_unit) {
+        *out_failure = ASMKIT_DECODE_FAILURE_INSUFFICIENT_BYTES;
+        return ASMKIT_ERR_DECODE_FAILED;
+    }
+
+    status = asmkit_decode_one(engine, workspace, code, code_size, address, out_inst);
+    if (status == ASMKIT_ERR_UNSUPPORTED_FEATURE) {
+        *out_failure = ASMKIT_DECODE_FAILURE_UNSUPPORTED_FEATURE;
+    } else if (status == ASMKIT_ERR_DECODE_FAILED) {
+        *out_failure = ASMKIT_DECODE_FAILURE_INVALID_ENCODING;
+    }
+    return status;
+}
+
 asmkit_status_t asmkit_decode_block_until(
     const asmkit_engine_t* ASMKIT_RESTRICT engine,
     asmkit_workspace_t* ASMKIT_RESTRICT workspace,

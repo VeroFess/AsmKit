@@ -319,6 +319,13 @@ static inline asmkit_status_t asmkit_inst_set_operand(asmkit_inst_t* inst, uint8
 struct asmkit_engine;
 struct asmkit_workspace;
 
+typedef enum asmkit_decode_failure_kind {
+    ASMKIT_DECODE_FAILURE_NONE = 0,
+    ASMKIT_DECODE_FAILURE_INVALID_ENCODING,
+    ASMKIT_DECODE_FAILURE_INSUFFICIENT_BYTES,
+    ASMKIT_DECODE_FAILURE_UNSUPPORTED_FEATURE
+} asmkit_decode_failure_kind_t;
+
 asmkit_status_t asmkit_decode_one(
     const struct asmkit_engine* engine,
     struct asmkit_workspace* workspace,
@@ -326,6 +333,15 @@ asmkit_status_t asmkit_decode_one(
     size_t code_size,
     uint64_t address,
     asmkit_inst_t* out_inst);
+
+asmkit_status_t asmkit_decode_one_ex(
+    const struct asmkit_engine* engine,
+    struct asmkit_workspace* workspace,
+    const uint8_t* code,
+    size_t code_size,
+    uint64_t address,
+    asmkit_inst_t* out_inst,
+    asmkit_decode_failure_kind_t* out_failure);
 
 typedef struct asmkit_decode_block_result {
     uint32_t inst_count;

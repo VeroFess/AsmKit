@@ -7,6 +7,10 @@ int asmkit_test_relocate(void)
     asmkit_detour_plan_options_t plan_options;
     asmkit_detour_plan_t plan;
     asmkit_relocate_result_t result;
+    asmkit_control_transfer_plan_t transfer_plan;
+    asmkit_encode_result_t encode_result;
+    asmkit_inst_t single_inst;
+    asmkit_emit_result_t single_emit;
     uint8_t out[64];
     uint64_t a64_x16_mask;
     uint8_t prologue[] = {0x55u, 0x48u, 0x89u, 0xe5u};
@@ -49,6 +53,17 @@ int asmkit_test_relocate(void)
     ASMKIT_CHECK(result.relocated_insts[1].relocated_size == 3u);
     ASMKIT_CHECK(out[0] == 0x55u && out[1] == 0x48u && out[2] == 0x89u && out[3] == 0xe5u);
     ASMKIT_CHECK(out[4] == 0xe9u);
+
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, riprel, sizeof(riprel), 0x1000u, &single_inst) == ASMKIT_OK);
+    ASMKIT_CHECK(asmkit_relocate_inst(&engine, 0, &single_inst, 0x2000u, out, sizeof(out), &single_emit) == ASMKIT_OK);
+    ASMKIT_CHECK(single_emit.size == 7u);
+    ASMKIT_CHECK((int32_t)asmkit_test_load32le(out + 3) == -4096);
+    ASMKIT_CHECK(asmkit_emit_padding(&engine, 5u, out, sizeof(out), &encode_result) == ASMKIT_OK);
+    ASMKIT_CHECK(encode_result.size == 5u);
+    ASMKIT_CHECK(out[0] == 0x90u && out[4] == 0x90u);
+    ASMKIT_CHECK(asmkit_plan_control_transfer(&engine, 0, ASMKIT_CONTROL_TRANSFER_JUMP,
+        0x1000u, 0x2000u, 0, &transfer_plan) == ASMKIT_OK);
+    ASMKIT_CHECK(transfer_plan.size != 0u);
 
     options.min_overwrite_size = 7u;
     options.continuation_address = 0x1007u;
