@@ -4,8 +4,25 @@
 
 static asmkit_status_t arm_decode(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const uint8_t* ASMKIT_RESTRICT code, size_t code_size, uint64_t address, asmkit_inst_t* ASMKIT_RESTRICT out_inst)
 {
+    asmkit_status_t status;
     (void)workspace;
-    return asmkit_gen_arm_decode_one(engine, code, code_size, address, out_inst);
+    status = asmkit_gen_arm_decode_one(engine, code, code_size, address, out_inst);
+    if (status != ASMKIT_OK) {
+        return status;
+    }
+    if (out_inst->mnemonic_id == ASMKIT_GEN_ARM_MNEMONIC_BX_ID ||
+        out_inst->mnemonic_id == ASMKIT_GEN_ARM_MNEMONIC_BLX_ID) {
+        out_inst->flags |= ASMKIT_INST_FLAG_STATE_SWITCH;
+    }
+    if (out_inst->mnemonic_id == ASMKIT_GEN_ARM_MNEMONIC_BLX_ID &&
+        (out_inst->flags & ASMKIT_INST_FLAG_DIRECT) != 0u && out_inst->operand_count > 0u) {
+        if (out_inst->mode == ASMKIT_MODE_ARM_A32) {
+            out_inst->operands[0].abs_target |= UINT64_C(1);
+        } else {
+            out_inst->operands[0].abs_target &= ~UINT64_C(1);
+        }
+    }
+    return ASMKIT_OK;
 }
 
 static asmkit_status_t arm_analyze(const asmkit_engine_t* ASMKIT_RESTRICT engine, asmkit_workspace_t* ASMKIT_RESTRICT workspace, const asmkit_inst_t* ASMKIT_RESTRICT inst, asmkit_inst_semantics_t* ASMKIT_RESTRICT out_semantics)

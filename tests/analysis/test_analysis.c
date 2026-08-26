@@ -12,6 +12,7 @@ int asmkit_test_analysis(void)
     uint8_t call_rel[] = {0xe8u, 0x00u, 0x00u, 0x00u, 0x00u};
     uint8_t thumb_it[] = {0x08u, 0xbfu};
     uint8_t thumb_nop[] = {0x00u, 0xbfu};
+    uint8_t a32_blx[] = {0x00u, 0x00u, 0x00u, 0xfbu};
     uint8_t short_a64[] = {0x1fu};
     uint8_t wasm_block[] = {0x02u, 0x40u};
 
@@ -48,6 +49,20 @@ int asmkit_test_analysis(void)
     ASMKIT_CHECK(control.predicate.kind == ASMKIT_EXECUTION_PREDICATE_ARM_CONDITION);
     ASMKIT_CHECK(control.predicate.predicate_id == 0u);
     ASMKIT_CHECK(control.successors[0].state.isa.kind == ASMKIT_ISA_STATE_NONE);
+
+    ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_ARM, ASMKIT_MODE_ARM_A32);
+    state.mode = ASMKIT_MODE_ARM_A32;
+    state.isa.kind = ASMKIT_ISA_STATE_NONE;
+    state.isa.arm_itstate = 0u;
+    ASMKIT_CHECK(asmkit_decode_one(&engine, 0, a32_blx, sizeof(a32_blx), 0x2000u, &inst) == ASMKIT_OK);
+    ASMKIT_CHECK((inst.flags & ASMKIT_INST_FLAG_STATE_SWITCH) != 0u);
+    ASMKIT_CHECK((inst.operands[0].abs_target & 1u) != 0u);
+    ASMKIT_CHECK(asmkit_analyze_inst_with_state(&engine, 0, &inst, &state, &control) == ASMKIT_OK);
+    ASMKIT_CHECK(control.successor_count == 2u);
+    ASMKIT_CHECK(control.successors[0].flow == ASMKIT_FLOW_CALL);
+    ASMKIT_CHECK(control.successors[0].state.mode == ASMKIT_MODE_ARM_THUMB);
+    ASMKIT_CHECK(control.successors[1].flow == ASMKIT_FLOW_FALLTHROUGH);
+    ASMKIT_CHECK(control.successors[1].state.mode == ASMKIT_MODE_ARM_A32);
 
     ASMKIT_INIT_ENGINE(&engine, ASMKIT_ARCH_AARCH64, ASMKIT_MODE_AARCH64);
     ASMKIT_CHECK(asmkit_get_target_capabilities(&engine, &capabilities) == ASMKIT_OK);
