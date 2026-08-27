@@ -118,6 +118,98 @@ typedef struct asmkit_control_analysis {
     asmkit_successor_state_transition_t successors[ASMKIT_MAX_SUCCESSOR_STATES];
 } asmkit_control_analysis_t;
 
+typedef enum asmkit_value_ref_kind {
+    ASMKIT_VALUE_REF_NONE = 0,
+    ASMKIT_VALUE_REF_OPERAND,
+    ASMKIT_VALUE_REF_REGISTER,
+    ASMKIT_VALUE_REF_IMMEDIATE,
+    ASMKIT_VALUE_REF_PC,
+    ASMKIT_VALUE_REF_TEMPORARY,
+    ASMKIT_VALUE_REF_CONTROL_TARGET
+} asmkit_value_ref_kind_t;
+
+typedef struct asmkit_value_ref {
+    asmkit_value_ref_kind_t kind;
+    uint8_t operand_index;
+    uint16_t width;
+    uint64_t register_id;
+    int64_t immediate;
+} asmkit_value_ref_t;
+
+typedef enum asmkit_value_effect_kind {
+    ASMKIT_VALUE_EFFECT_UNKNOWN_CLOBBER = 0,
+    ASMKIT_VALUE_EFFECT_COPY,
+    ASMKIT_VALUE_EFFECT_ADDRESS,
+    ASMKIT_VALUE_EFFECT_ADD,
+    ASMKIT_VALUE_EFFECT_SUB,
+    ASMKIT_VALUE_EFFECT_MUL,
+    ASMKIT_VALUE_EFFECT_SHIFT_LEFT,
+    ASMKIT_VALUE_EFFECT_AND,
+    ASMKIT_VALUE_EFFECT_OR,
+    ASMKIT_VALUE_EFFECT_XOR,
+    ASMKIT_VALUE_EFFECT_SHIFT_RIGHT_LOGICAL,
+    ASMKIT_VALUE_EFFECT_SHIFT_RIGHT_ARITHMETIC,
+    ASMKIT_VALUE_EFFECT_ROTATE_LEFT,
+    ASMKIT_VALUE_EFFECT_ROTATE_RIGHT,
+    ASMKIT_VALUE_EFFECT_SIGN_EXTEND,
+    ASMKIT_VALUE_EFFECT_ZERO_EXTEND,
+    ASMKIT_VALUE_EFFECT_LOAD,
+    ASMKIT_VALUE_EFFECT_STORE,
+    ASMKIT_VALUE_EFFECT_COMPARE,
+    ASMKIT_VALUE_EFFECT_CONDITION_USE
+} asmkit_value_effect_kind_t;
+
+enum {
+    ASMKIT_MAX_VALUE_EFFECT_SOURCES = 2u,
+    ASMKIT_MAX_VALUE_EFFECTS = 8u
+};
+
+typedef struct asmkit_value_effect {
+    asmkit_value_effect_kind_t kind;
+    asmkit_value_ref_t destination;
+    uint32_t source_count;
+    asmkit_value_ref_t sources[ASMKIT_MAX_VALUE_EFFECT_SOURCES];
+} asmkit_value_effect_t;
+
+typedef enum asmkit_compare_relation {
+    ASMKIT_COMPARE_NONE = 0,
+    ASMKIT_COMPARE_EQ,
+    ASMKIT_COMPARE_NE,
+    ASMKIT_COMPARE_ULT,
+    ASMKIT_COMPARE_ULE,
+    ASMKIT_COMPARE_UGT,
+    ASMKIT_COMPARE_UGE,
+    ASMKIT_COMPARE_SLT,
+    ASMKIT_COMPARE_SLE,
+    ASMKIT_COMPARE_SGT,
+    ASMKIT_COMPARE_SGE,
+    ASMKIT_COMPARE_BIT_CLEAR,
+    ASMKIT_COMPARE_BIT_SET
+} asmkit_compare_relation_t;
+
+typedef enum asmkit_condition_state {
+    ASMKIT_CONDITION_STATE_NONE = 0,
+    ASMKIT_CONDITION_STATE_X86_FLAGS,
+    ASMKIT_CONDITION_STATE_ARM_FLAGS,
+    ASMKIT_CONDITION_STATE_AARCH64_FLAGS,
+    ASMKIT_CONDITION_STATE_BPF_INLINE
+} asmkit_condition_state_t;
+
+typedef struct asmkit_condition_info {
+    bool defines_condition;
+    bool consumes_condition;
+    asmkit_condition_state_t state;
+    asmkit_compare_relation_t taken_relation;
+    asmkit_value_ref_t left;
+    asmkit_value_ref_t right;
+} asmkit_condition_info_t;
+
+typedef struct asmkit_value_analysis {
+    uint32_t effect_count;
+    asmkit_value_effect_t effects[ASMKIT_MAX_VALUE_EFFECTS];
+    asmkit_condition_info_t condition;
+} asmkit_value_analysis_t;
+
 struct asmkit_engine;
 struct asmkit_workspace;
 
@@ -133,6 +225,13 @@ asmkit_status_t asmkit_analyze_inst_with_state(
     const asmkit_inst_t* inst,
     const asmkit_decode_state_t* state,
     asmkit_control_analysis_t* out_analysis);
+
+asmkit_status_t asmkit_analyze_inst_values(
+    const struct asmkit_engine* engine,
+    struct asmkit_workspace* workspace,
+    const asmkit_inst_t* inst,
+    const asmkit_control_analysis_t* control,
+    asmkit_value_analysis_t* out_analysis);
 
 #ifdef __cplusplus
 }
